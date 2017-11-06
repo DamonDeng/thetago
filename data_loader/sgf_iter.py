@@ -17,8 +17,7 @@ class SGFIter(mx.io.DataIter):
         self.history_length = 8
         self.board_length = self.board_col * self.board_row
         self.file_limit = file_limit
-        self.data_generator = None
-        
+        self.data_generator = None        
 
         print ('initing SGFIter...')
         self.file_list = []
@@ -93,9 +92,6 @@ class SGFIter(mx.io.DataIter):
       return True, batch_data, batch_label
             
 
-      
-
-
 class SimpleIter(mx.io.DataIter):
     def __init__(self, data_names, data_shapes, data_gen,
                  label_names, label_shapes, label_gen, num_batches=10):
@@ -137,9 +133,10 @@ class SimpleIter(mx.io.DataIter):
             raise StopIteration
 
 class SimulatorIter(mx.io.DataIter):
-    def __init__(self, num_batches=10):
+    def __init__(self, batch_size=30, num_batches=10):
         self.num_batches = num_batches
         self.cur_batch = 0
+        self.batch_size = batch_size
 
     def __iter__(self):
         return self
@@ -152,20 +149,20 @@ class SimulatorIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        return [('data',(32,8,19,19))]
+        return [('data',(self.batch_size ,8,19,19))]
         # return zip(['data'],[(32,100)])
 
     @property
     def provide_label(self):
-        return [('softmax_label', (32,))]
+        return [('softmax_label', (self.batch_size ,))]
         # return zip(['softmax_label'],[(32,)])
 
     def next(self):
         if self.cur_batch < self.num_batches:
             print("Return: " + str(self.cur_batch))
             self.cur_batch += 1
-            data_pool = np.random.uniform(-1, 1, (32, 8, 19, 19))
-            label_pool = np.random.randint(0, 361, (32,))
+            data_pool = np.random.uniform(-1, 1, (self.batch_size , 8, 19, 19))
+            label_pool = np.random.randint(0, 361, (self.batch_size ,))
 
             data = [mx.nd.array(data_pool)]
             label = [mx.nd.array(label_pool)]
