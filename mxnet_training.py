@@ -41,7 +41,7 @@ def simple_mlp():
 
 def simple_CNN():
 
-  print('mxnet training with CNN  0.01')
+  print('mxnet training with CNN  0.02')
   
   num_classes = 361
 
@@ -68,12 +68,14 @@ def simple_CNN():
 
   logging.basicConfig(level=logging.INFO)
  
-  data_iter = SGFIter(sgf_directory='data/train', batch_size=32, file_limit = 20)
+  #data_iter = SGFIter(sgf_directory='data/train', batch_size=64, file_limit = 2000)
+  # data_iter = SimulatorIter( batch_size=1024)
+  data_iter = SimulatorIter(batch_size=64, num_batches=1024)
  
   print (str(data_iter.provide_data))
   print (str(data_iter.provide_label))
   
-  prefix = 'checkpoint/mxnet_thetago_CNN'
+  prefix = 'checkpoint/thetago_testing2'
 
   devices = mx.cpu(0)
   # device = mx.gpu(0)

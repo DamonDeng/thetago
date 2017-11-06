@@ -137,6 +137,9 @@ class SimulatorIter(mx.io.DataIter):
         self.num_batches = num_batches
         self.cur_batch = 0
         self.batch_size = batch_size
+        self.data_pool = np.random.uniform(-1, 1, (self.batch_size , 8, 19, 19))
+        self.label_pool = np.random.randint(0, 361, (self.batch_size ,))
+
 
     def __iter__(self):
         return self
@@ -161,11 +164,9 @@ class SimulatorIter(mx.io.DataIter):
         if self.cur_batch < self.num_batches:
             # print("Return: " + str(self.cur_batch))
             self.cur_batch += 1
-            data_pool = np.random.uniform(-1, 1, (self.batch_size , 8, 19, 19))
-            label_pool = np.random.randint(0, 361, (self.batch_size ,))
 
-            data = [mx.nd.array(data_pool)]
-            label = [mx.nd.array(label_pool)]
+            data = [mx.nd.array(self.data_pool)]
+            label = [mx.nd.array(self.label_pool)]
             return mx.io.DataBatch(data, label)
         else:
             raise StopIteration
