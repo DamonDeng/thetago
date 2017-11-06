@@ -159,7 +159,7 @@ class SimulatorIter(mx.io.DataIter):
 
     def next(self):
         if self.cur_batch < self.num_batches:
-            print("Return: " + str(self.cur_batch))
+            # print("Return: " + str(self.cur_batch))
             self.cur_batch += 1
             data_pool = np.random.uniform(-1, 1, (self.batch_size , 8, 19, 19))
             label_pool = np.random.randint(0, 361, (self.batch_size ,))
