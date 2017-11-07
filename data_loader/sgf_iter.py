@@ -8,13 +8,13 @@ from go_core.goboard import GoBoard
 from data_loader.data_generator import DataGenerator
 
 class SGFIter(mx.io.DataIter):
-    def __init__(self, sgf_directory, batch_size=30, file_limit = -1):
+    def __init__(self, sgf_directory, batch_size=30, file_limit = -1, history_length=8):
         self.sgf_directory = sgf_directory
         self.batch_size = batch_size
         self.cur_batch = 0
         self.board_col = 19
         self.board_row = 19
-        self.history_length = 8
+        self.history_length = history_length
         self.board_length = self.board_col * self.board_row
         self.file_limit = file_limit
         self.data_generator = None        
@@ -67,7 +67,7 @@ class SGFIter(mx.io.DataIter):
         else:
           cur_file_name = self.file_list[self.cur_file_index]
           self.cur_file_index = self.cur_file_index + 1
-          self.data_generator = DataGenerator(cur_file_name)
+          self.data_generator = DataGenerator(cur_file_name, history_length=self.history_length)
 
       for i in range(self.batch_size):
         
@@ -87,7 +87,7 @@ class SGFIter(mx.io.DataIter):
             else:
               cur_file_name = self.file_list[self.cur_file_index]
               self.cur_file_index = self.cur_file_index + 1
-              self.data_generator = DataGenerator(cur_file_name)
+              self.data_generator = DataGenerator(cur_file_name, history_length=self.history_length)
       
       return True, batch_data, batch_label
             
