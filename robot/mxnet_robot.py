@@ -1,12 +1,12 @@
 import mxnet as mx
 import numpy as np
-from data_loader.sgf_iter import SimpleIter, SimulatorIter, SGFIter
+from data_loader.sgf_iter import  SimulatorIter, SGFIter
 import logging
 from go_core.goboard import GoBoard
 
 class MXNetRobot:
   def __init__(self):
-    sym, arg_params, aux_params = mx.model.load_checkpoint('model_zoo/mxnet_thetago_serverCNN', 100)
+    sym, arg_params, aux_params = mx.model.load_checkpoint('model_zoo/thetago_testing3', 100)
     mod = mx.mod.Module(symbol=sym, label_names=None, context=mx.cpu(0))
     mod.bind(for_training=False, data_shapes=[('data', (1,8,19,19))], label_shapes=mod._label_shapes)
     mod.set_params(arg_params, aux_params, allow_missing=True)
