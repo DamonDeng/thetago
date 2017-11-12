@@ -4,7 +4,24 @@ from go_core.goboard import GoBoard
 import numpy as np
 import mxnet as mx
 
-class FeatureGenerator(object):
+class FeatureProcessor(object):
+
+    @classmethod
+    def get_processor(cls, sgf_file):
+      return cls(sgf_file)
+
+    @classmethod
+    def get_data_shape(cls, batch_size):
+      board_col = 19
+      board_row = 19
+      return [('data',(batch_size, 8, board_row, board_col))]
+
+    @classmethod
+    def get_label_shape(cls, batch_size):
+      return [('softmax_label', (batch_size, ))]
+
+
+
     def __init__(self, sgf_file, board_size=19, history_length=8):
         self.sgf_file = sgf_file
         self.board_col = board_size
@@ -30,7 +47,30 @@ class FeatureGenerator(object):
 
         # get current state as the t-1 state, will be all zero if there is no handicap
         
-        
+    def get_generator(self):
+      for item in self.main_sequence_iter:
+
+        color, move = item.get_move()
+
+        if not color is None and not move is None:
+
+          row, col = move
+          self.label = np.zeros((self.board_row * self.board_col))
+          self.label = self.board_row*row + col
+          for i in range(self.history_length-1):
+            self.data_b[i] = self.data_b[i+1]
+            self.data_w[i] = self.data_w[i+1]
+
+          self.data_b[-1] = self.go_board.get_state('b')
+          self.data_w[-1] = self.go_board.get_state('w')
+
+          self.go_board.apply_move(color, move)
+
+          if color == 'b':
+            yield self.data_b, self.label
+          else:
+            yield self.data_w, self.label
+
 
     def next(self):
 

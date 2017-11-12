@@ -1,6 +1,6 @@
 import mxnet as mx
 import numpy as np
-from data_loader.sgf_iter import SimpleIter, SimulatorIter, SGFIter
+from data_loader.sgf_iter import SimulatorIter, SGFIter
 import logging
 
 
@@ -34,16 +34,16 @@ def simple_CNN():
 
   logging.basicConfig(level=logging.INFO)
  
-  data_iter = SGFIter(sgf_directory='data/train', batch_size=1024, file_limit = 5000)
+  data_iter = SGFIter(sgf_directory='data/train', batch_size=1024, file_limit = -1)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=30)
   print (str(data_iter.provide_data))
   print (str(data_iter.provide_label))
   
-  prefix = 'checkpoint/thetago_CNN2'
+  prefix = 'checkpoint/thetago_CNN8'
 
-  devices = mx.cpu(0)
+  #devices = mx.cpu(0)
   # devices = mx.gpu(0)
-  # devices = [mx.gpu(0),mx.gpu(1),mx.gpu(2),mx.gpu(3),mx.gpu(4),mx.gpu(5),mx.gpu(6),mx.gpu(7)]
+  devices = [mx.gpu(0),mx.gpu(1),mx.gpu(2),mx.gpu(3),mx.gpu(4),mx.gpu(5),mx.gpu(6),mx.gpu(7)]
 
   mod = mx.mod.Module(symbol=cnn_net,
                       context=devices)

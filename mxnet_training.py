@@ -1,43 +1,9 @@
 import mxnet as mx
 import numpy as np
-from data_loader.sgf_iter import SimulatorIter, SGFIter
+from data_loader.sgf_iter import SGFIter, SimulatorIter
 import logging
+from data_loader.feature_processor import FeatureProcessor
 
-
-# def simple_mlp():
-
-#   print('mxnet training with MLP  0.01')
-  
-#   num_classes = 361
-#   net = mx.sym.Variable('data')
-#   net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=64)
-#   net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
-#   net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=num_classes)
-#   net = mx.sym.SoftmaxOutput(data=net, name='softmax')
-#   print(net.list_arguments())
-#   print(net.list_outputs())
-
-
-
-
-#   logging.basicConfig(level=logging.INFO)
-
- 
-#   data_iter = SGFIter(sgf_directory='data/train', batch_size=32, file_limit = 200)
- 
- 
-#   print (str(data_iter.provide_data))
-#   print (str(data_iter.provide_label))
-
-#   c = data_iter.next()
-
-#   print (str(c))
-#   prefix = 'checkpoint/mxnet_thetago'
-#   mod = mx.mod.Module(symbol=net)
-#   mod.fit(data_iter, 
-#           num_epoch=100, 
-#           batch_end_callback=mx.callback.Speedometer(32, 20),
-#           epoch_end_callback=mx.callback.do_checkpoint(prefix))
 
 def simple_CNN():
 
@@ -68,9 +34,10 @@ def simple_CNN():
 
   logging.basicConfig(level=logging.INFO)
  
-  data_iter = SGFIter(sgf_directory='data/standard', batch_size=16, file_limit = 2000)
-  # data_iter = SimulatorIter( batch_size=1024)
-  #data_iter = SimulatorIter(batch_size=64, num_batches=1024)
+  processor = FeatureProcessor
+  data_iter = SGFIter(sgf_directory='data/standard', batch_size=1024, file_limit = 2000, processor_class=processor)
+  #data_iter = SimulatorIter( batch_size=1024)
+  #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
  
   print (str(data_iter.provide_data))
   print (str(data_iter.provide_label))
@@ -84,7 +51,7 @@ def simple_CNN():
                       context=devices)
 
   mod.fit(data_iter, 
-          num_epoch=100, 
+          num_epoch=1000, 
           eval_metric='ce',
           batch_end_callback=mx.callback.Speedometer(32, 20),
           epoch_end_callback=mx.callback.do_checkpoint(prefix))
