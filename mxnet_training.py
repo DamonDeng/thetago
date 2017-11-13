@@ -8,15 +8,22 @@ from sys import argv
 import sys
 import importlib
 import os
+import argparse
 
-def start_training():
+def start_training(args):
 
   print('mxnet training starting 0.03')
 
-  network_name = argv[1]
-  data_dir = argv[2]
-  checkpoint_prefix = argv[3]
+  network_name = args.network
+  data_dir = args.data
+  checkpoint_prefix = args.prefix
   
+  if args.devices == 'gpu':
+    device = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)] 
+  else:
+    devices = mx.cpu(0)
+  
+
   net = _load_network_by_name(network_name)
 
   logging.basicConfig(level=logging.INFO)
@@ -31,16 +38,14 @@ def start_training():
   
   prefix = checkpoint_prefix
 
-  devices = mx.cpu(0)
-  # device = mx.gpu(0)
-
+  
   mod = mx.mod.Module(symbol=net,
                       context=devices)
 
   mod.fit(data_iter, 
-          num_epoch=1000, 
+          num_epoch=args.epoche, 
           eval_metric='ce',
-          optimizer_params=(('learning_rate', 0.5),),
+          optimizer_params=(('learning_rate', args.learningrate),),
           batch_end_callback=mx.callback.Speedometer(32, 20),
           epoch_end_callback=mx.callback.do_checkpoint(prefix))
 
@@ -75,4 +80,29 @@ def _load_network_by_name(name):
 
 
 
-start_training()
+def main():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    train_parser = subparsers.add_parser('train', help='Do some training.')
+    train_parser.set_defaults(command='train')
+    train_parser.add_argument('--data', '-i', required=True, help='Data directory.')
+    train_parser.add_argument('--network', '-n', required=True, help='Network to use.')
+    train_parser.add_argument('--prefix', '-p', required=True, help='prefix of checkpoint.')
+    train_parser.add_argument('--devices', '-d', default="cpu", help='prefix of checkpoint.')
+    train_parser.add_argument('--epoche', '-e', type=int, default=100, help='Number of epoche')
+    train_parser.add_argument('--learningrate', '-l', type=float, default=0.1, help='Learning rate')
+
+
+    args = parser.parse_args()
+
+    if args.command == 'train':
+      start_training(args)
+      
+
+if __name__ == '__main__':
+    main()
+
+# command format
+# python mxnet_training.py train --data data/standard --network network.original_cnn --prefix checkpoint/testing12 --learningrate 2
+    
