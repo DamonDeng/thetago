@@ -26,8 +26,10 @@ class SGFIter(mx.io.DataIter):
         self.board_length = self.board_col * self.board_row
         self.file_limit = file_limit
 
-        self.batch_data = np.zeros((self.batch_size, 8, self.board_row, self.board_col))
-        self.batch_label = np.zeros((self.batch_size,))
+
+
+        self.batch_data = np.zeros(self.processor_class.get_data_shape_only(batch_size))
+        self.batch_label = np.zeros(self.processor_class.get_label_shape_only(batch_size))
             
 
         print ('initing SGFIter...')

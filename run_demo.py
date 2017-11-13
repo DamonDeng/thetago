@@ -17,6 +17,6 @@ args = parser.parse_args()
 
 # Open web frontend and serve model
 webbrowser.open('http://{}:{}/'.format(args.host, args.port), new=2)
-go_robot = MXNetRobot()
+go_robot = MXNetRobot('model_zoo/thetago_standard', 100)
 go_server = HTTPFrontend(bot=go_robot, port=args.port)
 go_server.run()

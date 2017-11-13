@@ -3,7 +3,7 @@ import sys
 
 from . import command, response
 from .board import gtp_position_to_coords, coords_to_gtp_position
-from ..dataloader.goboard import GoBoard
+from go_core.goboard import GoBoard
 
 __all__ = [
     'GTPFrontend',
