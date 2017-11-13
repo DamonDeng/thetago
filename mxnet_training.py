@@ -40,6 +40,7 @@ def start_training():
   mod.fit(data_iter, 
           num_epoch=1000, 
           eval_metric='ce',
+          optimizer_params=(('learning_rate', 0.5),),
           batch_end_callback=mx.callback.Speedometer(32, 20),
           epoch_end_callback=mx.callback.do_checkpoint(prefix))
 
