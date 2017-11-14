@@ -19,7 +19,7 @@ def start_training(args):
   checkpoint_prefix = args.prefix
   
   if args.devices == 'gpu':
-    device = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)] 
+    devices = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)] 
   else:
     devices = mx.cpu(0)
   
