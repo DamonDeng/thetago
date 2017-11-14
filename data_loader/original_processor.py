@@ -24,7 +24,7 @@ class OriginalProcessor(object):
         self.main_sequence_iter = sgf.main_sequence_iter()
         
         if sgf.get_handicap() != None and sgf.get_handicap() != 0:
-          print('handling handicap')
+          # print('handling handicap')
           for setup in sgf.get_root().get_setup_stones():
             for move in setup:
               self.go_board.apply_move('b', move)
