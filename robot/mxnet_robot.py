@@ -42,6 +42,21 @@ class MXNetRobot:
 
     data,label = self.processor.feature_and_label(color, (0,0), self.go_board, 7)
 
+    # panenumber = 0
+    # for pane in data:
+    #   rownumber = 0
+    #   for row in pane:
+    #     columnnumber = 0
+    #     for column in row:
+    #       if column != 0:
+    #         print("("+str(panenumber)+","+str(columnnumber)+","+str(rownumber)+"):" + str(column)),
+    #       columnnumber = columnnumber + 1 
+    #     rownumber = rownumber + 1
+    #   panenumber = panenumber + 1
+    
+    # print(" ")
+    # print(label)
+
     input_data = np.zeros((1,7,19,19))
     
     input_data[0] = data

@@ -29,7 +29,7 @@ def start_training(args):
   logging.basicConfig(level=logging.INFO)
  
   processor = OriginalProcessor
-  data_iter = SGFIter(sgf_directory=data_dir, batch_size=1024, file_limit = 2000, processor_class=processor)
+  data_iter = SGFIter(sgf_directory=data_dir, batch_size=args.batchsize, file_limit = 2000, processor_class=processor)
   #data_iter = SimulatorIter( batch_size=1024)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
  
@@ -91,6 +91,7 @@ def main():
     train_parser.add_argument('--prefix', '-p', required=True, help='prefix of checkpoint.')
     train_parser.add_argument('--devices', '-d', default="cpu", help='prefix of checkpoint.')
     train_parser.add_argument('--epoche', '-e', type=int, default=100, help='Number of epoche')
+    train_parser.add_argument('--batchsize', '-b', type=int, default=512, help='Batch size')
     train_parser.add_argument('--learningrate', '-l', type=float, default=0.1, help='Learning rate')
 
 

@@ -24,11 +24,11 @@ class OriginalProcessor(object):
         self.main_sequence_iter = sgf.main_sequence_iter()
         
         if sgf.get_handicap() != None and sgf.get_handicap() != 0:
+          print('handling handicap')
           for setup in sgf.get_root().get_setup_stones():
             for move in setup:
               self.go_board.apply_move('b', move)
 
-        # get current state as the t-1 state, will be all zero if there is no handicap
 
     @classmethod
     def get_processor(cls, sgf_file):
@@ -62,7 +62,24 @@ class OriginalProcessor(object):
 
         if not color is None and not move is None:
 
+          # print('-------------------------------')
           data,label = self.feature_and_label(color, move, self.go_board, 7)
+          # print('color:'+color + '   move:'+str(move))
+          
+          # panenumber = 0
+          # for pane in data:
+          #   rownumber = 0
+          #   for row in pane:
+          #     columnnumber = 0
+          #     for column in row:
+          #       if column != 0:
+          #         print("("+str(panenumber)+","+str(columnnumber)+","+str(rownumber)+"):" + str(column)),
+          #       columnnumber = columnnumber + 1 
+          #     rownumber = rownumber + 1
+          #   panenumber = panenumber + 1
+          
+          # print(" ")
+          # print(label)
 
           self.go_board.apply_move(color, move)
 
