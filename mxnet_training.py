@@ -47,6 +47,7 @@ def start_training(args):
   mod = mx.mod.Module(symbol=net,
                       context=devices)
 
+
   try:
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
