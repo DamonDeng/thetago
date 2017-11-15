@@ -51,7 +51,7 @@ def start_training(args):
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
             eval_metric='ce',
-            optimizer='adadelta',
+            optimizer=args.optimizer,
             optimizer_params=(('learning_rate', args.learningrate),),
             batch_end_callback=mx.callback.Speedometer(32, 20),
             epoch_end_callback=mx.callback.do_checkpoint(prefix))
@@ -99,6 +99,7 @@ def main():
     train_parser.add_argument('--network', '-n', required=True, help='Network to use.')
     train_parser.add_argument('--prefix', '-p', required=True, help='prefix of checkpoint.')
     train_parser.add_argument('--devices', '-d', default="cpu", help='prefix of checkpoint.')
+    train_parser.add_argument('--optimizer', '-o', default="sgd", help='optimizer short name')
     train_parser.add_argument('--epoche', '-e', type=int, default=100, help='Number of epoche')
     train_parser.add_argument('--batchsize', '-b', type=int, default=512, help='Batch size')
     train_parser.add_argument('--learningrate', '-l', type=float, default=0.1, help='Learning rate')
