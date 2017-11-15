@@ -1,6 +1,7 @@
 import mxnet as mx
 import numpy as np
 from data_loader.sgf_iter import SGFIter, SimulatorIter
+from data_loader.multi_thread_sgf_iter import MultiThreadSGFIter
 import logging
 from data_loader.feature_processor import FeatureProcessor
 from data_loader.original_processor import OriginalProcessor
@@ -29,7 +30,7 @@ def start_training(args):
   logging.basicConfig(level=logging.INFO)
  
   processor = OriginalProcessor
-  data_iter = SGFIter(sgf_directory=data_dir, batch_size=args.batchsize, file_limit = args.filelimit, processor_class=processor)
+  data_iter = MultiThreadSGFIter(sgf_directory=data_dir, workers=8, batch_size=args.batchsize, file_limit = args.filelimit, processor_class=processor)
   #data_iter = SimulatorIter( batch_size=1024)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
  
@@ -42,12 +43,15 @@ def start_training(args):
   mod = mx.mod.Module(symbol=net,
                       context=devices)
 
-  mod.fit(data_iter, 
-          num_epoch=args.epoche, 
-          eval_metric='ce',
-          optimizer_params=(('learning_rate', args.learningrate),),
-          batch_end_callback=mx.callback.Speedometer(32, 20),
-          epoch_end_callback=mx.callback.do_checkpoint(prefix))
+  try:
+    mod.fit(data_iter, 
+            num_epoch=args.epoche, 
+            eval_metric='ce',
+            optimizer_params=(('learning_rate', args.learningrate),),
+            batch_end_callback=mx.callback.Speedometer(32, 20),
+            epoch_end_callback=mx.callback.do_checkpoint(prefix))
+  finally:
+    data_iter.stop_task()
 
 def _load_module_from_filename(filename):
     if sys.version_info < (3, 3):
