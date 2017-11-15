@@ -10,6 +10,7 @@ import sys
 import importlib
 import os
 import argparse
+from multiprocessing import cpu_count
 
 def start_training(args):
 
@@ -30,7 +31,10 @@ def start_training(args):
   logging.basicConfig(level=logging.INFO)
  
   processor = OriginalProcessor
-  data_iter = MultiThreadSGFIter(sgf_directory=data_dir, workers=8, batch_size=args.batchsize, file_limit = args.filelimit, processor_class=processor)
+
+  workers = cpu_count()
+  print('using '+ str(workers) + " workers to load the SGF data")
+  data_iter = MultiThreadSGFIter(sgf_directory=data_dir, workers=workers, batch_size=args.batchsize, file_limit = args.filelimit, processor_class=processor)
   #data_iter = SimulatorIter( batch_size=1024)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
  
