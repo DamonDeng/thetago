@@ -14,7 +14,7 @@ from data_loader.original_processor import OriginalProcessor
 checkpoint_file = argv[1]
 epoch = int(argv[2])
 
-processor = OriginalProcessor('data/standard/streight_and_curve15.sgf')
+processor = OriginalProcessor
 bot = MXNetRobot(checkpoint_file, epoch, processor)
 
 

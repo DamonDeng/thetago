@@ -4,7 +4,7 @@ from go_core.goboard import GoBoard
 import numpy as np
 import mxnet as mx
 
-class OriginalProcessor(object):
+class ValueProcessor(object):
 
     def __init__(self, sgf_file, board_size=19):
         self.sgf_file = sgf_file
@@ -22,6 +22,8 @@ class OriginalProcessor(object):
         sgf = Sgf_game.from_string(sgf_content)
 
         self.main_sequence_iter = sgf.main_sequence_iter()
+
+        self.winner = sgf.get_winner()
         
         if sgf.get_handicap() != None and sgf.get_handicap() != 0:
           # print('handling handicap')
@@ -52,43 +54,45 @@ class OriginalProcessor(object):
 
     @classmethod
     def get_label_shape(cls, batch_size):
-      return [('softmax_label', (batch_size, ))]
+      return [('label', (batch_size, ))]
 
 
     def get_generator(self):
-      for item in self.main_sequence_iter:
+      
+      if self.winner is not None:
+        for item in self.main_sequence_iter:
 
-        color, move = item.get_move()
+          color, move = item.get_move()
 
-        if not color is None and not move is None:
+          if not color is None and not move is None:
 
-          # print('-------------------------------')
-          data,label = self.feature_and_label(color, move, self.go_board, 7)
-          # print('color:'+color + '   move:'+str(move))
-          
-          # panenumber = 0
-          # for pane in data:
-          #   rownumber = 0
-          #   for row in pane:
-          #     columnnumber = 0
-          #     for column in row:
-          #       if column != 0:
-          #         print("("+str(panenumber)+","+str(columnnumber)+","+str(rownumber)+"):" + str(column)),
-          #       columnnumber = columnnumber + 1 
-          #     rownumber = rownumber + 1
-          #   panenumber = panenumber + 1
-          
-          # print(" ")
-          # print(label)
+            # print('-------------------------------')
+            data,label = self.feature_and_label(color, self.winner, self.go_board, 7)
+            # print('color:'+color + '   move:'+str(move))
+            
+            # panenumber = 0
+            # for pane in data:
+            #   rownumber = 0
+            #   for row in pane:
+            #     columnnumber = 0
+            #     for column in row:
+            #       if column != 0:
+            #         print("("+str(panenumber)+","+str(columnnumber)+","+str(rownumber)+"):" + str(column)),
+            #       columnnumber = columnnumber + 1 
+            #     rownumber = rownumber + 1
+            #   panenumber = panenumber + 1
+            
+            # print(" ")
+            # print(label)
 
-          self.go_board.apply_move(color, move)
+            self.go_board.apply_move(color, move)
 
-          yield data, label
+            yield data, label
           
 
     
     @classmethod    
-    def feature_and_label(cls, color, move, go_board, num_planes):
+    def feature_and_label(cls, color, winner, go_board, num_planes):
         '''
         Parameters
         ----------
@@ -107,9 +111,16 @@ class OriginalProcessor(object):
         '''
 
         # print('calling feature and label from seven pane processer')
-        row, col = move
+        
         enemy_color = go_board.other_color(color)
-        label = row * 19 + col
+        if winner is None:
+            label = None
+        else:
+            if winner == 'b':
+                label = 0
+            else:
+                label = 1
+        
         move_array = np.zeros((num_planes, go_board.board_size, go_board.board_size))
         for row in range(0, go_board.board_size):
             for col in range(0, go_board.board_size):

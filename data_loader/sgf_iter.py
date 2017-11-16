@@ -69,21 +69,22 @@ class SGFIter(mx.io.DataIter):
         
 
     def next(self):
-        
 
-        try:
-            for i in range(self.batch_size):
-                data, label = self.generator.next()
-                
-                self.batch_data[i] = data
-                self.batch_label[i] = label
+      print('got one batch')
+      try:
+          
+          for i in range(self.batch_size):
+              data, label = self.generator.next()
+              
+              self.batch_data[i] = data
+              self.batch_label[i] = label
+          
+          data = [mx.nd.array(self.batch_data)]
+          label = [mx.nd.array(self.batch_label)]
+      except StopIteration:
+          raise StopIteration
 
-            data = [mx.nd.array(self.batch_data)]
-            label = [mx.nd.array(self.batch_label)]
-        except StopIteration:
-            raise StopIteration
-
-        return mx.io.DataBatch(data, label)
+      return mx.io.DataBatch(data, label)
 
         
 

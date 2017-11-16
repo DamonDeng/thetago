@@ -7,7 +7,7 @@ import copy
 from data_loader.original_processor import OriginalProcessor
 
 class MXNetRobot:
-  def __init__(self, checkpoint_file, epoch, processor):
+  def __init__(self, checkpoint_file, epoch, processor_class):
     sym, arg_params, aux_params = mx.model.load_checkpoint(checkpoint_file, epoch)
     mod = mx.mod.Module(symbol=sym, label_names=None, context=mx.cpu(0))
     mod.bind(for_training=False, data_shapes=[('data', (1,7,19,19))], label_shapes=mod._label_shapes)
@@ -15,7 +15,7 @@ class MXNetRobot:
 
     self.model = mod
     self.go_board = GoBoard(19)
-    self.processor = processor
+    self.processor_class = processor_class
     
   def set_board(self, board):
     self.go_board = copy.deepcopy(board)
@@ -40,7 +40,7 @@ class MXNetRobot:
 
   def select_move(self, color):
 
-    data,label = self.processor.feature_and_label(color, (0,0), self.go_board, 7)
+    data,label = self.processor_class.feature_and_label(color, (0,0), self.go_board, 7)
 
     # panenumber = 0
     # for pane in data:

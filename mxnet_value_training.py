@@ -56,10 +56,11 @@ def start_training(args):
   
   prefix = checkpoint_prefix
 
-  # print(net.list_arguments())
+#   print(net.list_arguments())
   
   mod = mx.mod.Module(symbol=net,
-                      context=devices)
+                      context=devices,
+                      label_names=('label',))
 
 
   try:
