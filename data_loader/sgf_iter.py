@@ -70,7 +70,7 @@ class SGFIter(mx.io.DataIter):
 
     def next(self):
 
-      print('got one batch')
+    #   print('got one batch')
       try:
           
           for i in range(self.batch_size):

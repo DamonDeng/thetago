@@ -19,13 +19,13 @@ class OriginalProcessor(object):
 
         sgf_content = open(sgf_file,'r').read()
       
-        sgf = Sgf_game.from_string(sgf_content)
+        self.sgf = Sgf_game.from_string(sgf_content)
 
-        self.main_sequence_iter = sgf.main_sequence_iter()
+        self.main_sequence_iter = self.sgf.main_sequence_iter()
         
-        if sgf.get_handicap() != None and sgf.get_handicap() != 0:
+        if self.sgf.get_handicap() != None and self.sgf.get_handicap() != 0:
           # print('handling handicap')
-          for setup in sgf.get_root().get_setup_stones():
+          for setup in self.sgf.get_root().get_setup_stones():
             for move in setup:
               self.go_board.apply_move('b', move)
 
@@ -56,34 +56,27 @@ class OriginalProcessor(object):
 
 
     def get_generator(self):
-      for item in self.main_sequence_iter:
 
-        color, move = item.get_move()
+      # kind of urgly way to select game played by player with d or p level
+      w_level = self.sgf.get_player_level('w')
+      b_level = self.sgf.get_player_level('b')
 
-        if not color is None and not move is None:
+      if w_level is not None and b_level is not None:
+        if ('d' in w_level or 'p' in w_level) and ('d' in b_level or 'p' in b_level):
 
-          # print('-------------------------------')
-          data,label = self.feature_and_label(color, move, self.go_board, 7)
-          # print('color:'+color + '   move:'+str(move))
-          
-          # panenumber = 0
-          # for pane in data:
-          #   rownumber = 0
-          #   for row in pane:
-          #     columnnumber = 0
-          #     for column in row:
-          #       if column != 0:
-          #         print("("+str(panenumber)+","+str(columnnumber)+","+str(rownumber)+"):" + str(column)),
-          #       columnnumber = columnnumber + 1 
-          #     rownumber = rownumber + 1
-          #   panenumber = panenumber + 1
-          
-          # print(" ")
-          # print(label)
+          for item in self.main_sequence_iter:
 
-          self.go_board.apply_move(color, move)
+            color, move = item.get_move()
 
-          yield data, label
+            if not color is None and not move is None:
+
+              # print('-------------------------------')
+              data,label = self.feature_and_label(color, move, self.go_board, 7)
+              # print('color:'+color + '   move:'+str(move))
+
+              self.go_board.apply_move(color, move)
+
+              yield data, label
           
 
     

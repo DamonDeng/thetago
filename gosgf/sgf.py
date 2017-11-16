@@ -792,6 +792,19 @@ class Sgf_game(object):
         except KeyError:
             return None
 
+    def get_player_level(self, colour):
+        """Return the level of the specified player.
+
+        Returns None if there is no corresponding 'PB' or 'PW' property.
+
+        """
+        try:
+            return self.root.get(
+                {'b': b'BR', 'w': b'WR'}[colour]).decode(self.presenter.encoding)
+        except KeyError:
+            return None
+
+
     def get_winner(self):
         """Return the colour of the winning player.
 
