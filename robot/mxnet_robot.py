@@ -5,17 +5,27 @@ import logging
 from go_core.goboard import GoBoard
 import copy
 from data_loader.original_processor import OriginalProcessor
+from data_loader.value_processor import ValueProcessor
 
 class MXNetRobot:
-  def __init__(self, checkpoint_file, epoch, processor_class):
+  def __init__(self, checkpoint_file, epoch, processor_class, value_file=None, value_epoch=None, value_processor_class = ValueProcessor):
     sym, arg_params, aux_params = mx.model.load_checkpoint(checkpoint_file, epoch)
     mod = mx.mod.Module(symbol=sym, label_names=None, context=mx.cpu(0))
     mod.bind(for_training=False, data_shapes=[('data', (1,7,19,19))], label_shapes=mod._label_shapes)
     mod.set_params(arg_params, aux_params, allow_missing=True)
-
     self.model = mod
+
+    self.value_model = None
+    if value_file is not None and value_epoch is not None:
+      value_sym, value_arg_params, value_aux_params = mx.model.load_checkpoint(value_file, value_epoch)
+      value_mod = mx.mod.Module(symbol=value_sym, label_names=None, context=mx.cpu(0))
+      value_mod.bind(for_training=False, data_shapes=[('data', (1,7,19,19))], label_shapes=value_mod._label_shapes)
+      value_mod.set_params(value_arg_params, value_aux_params, allow_missing=True)
+      self.value_model = value_mod
+    
     self.go_board = GoBoard(19)
     self.processor_class = processor_class
+    self.value_processor_class = value_processor_class
     
   def set_board(self, board):
     self.go_board = copy.deepcopy(board)
@@ -68,12 +78,45 @@ class MXNetRobot:
 
     position_list = self.get_move(output)
 
+    # get first 10 position
+    selected_position_list = []
+    selected_number = 0
     for position_number in position_list:
       position = self.get_position(position_number)
-
       if self.go_board.is_move_legal(color, position):
-        self.go_board.apply_move(color, position)
-        return position
+        selected_position_list.append(position)
+        selected_number = selected_number + 1
+        if selected_number >= 10:
+          break
+
+    if self.value_model is None:
+      if len(selected_position_list) < 1:
+        return None
+      else:
+        self.go_board.apply_move(color, selected_position_list[0])
+        return selected_position_list[0]
+    else:
+      ## should evaluate the position value here
+      if len(selected_position_list) < 1:
+        return None
+      else:
+        value_input_data = np.zeros((1,7,19,19))  
+        result_list = []
+        max_value = -1
+        for cur_selected_position in selected_position_list:
+          temp_board = copy.deepcopy(self.go_board)
+          temp_board.apply_move(color, cur_selected_position)
+          value_data, value_label = self.value_processor_class.feature_and_label(color, None, temp_board)
+          value_input_data[0] = value_data
+          value_data_iter = mx.io.NDArrayIter(value_input_data)
+          value_output = self.value_model.predict(value_data_iter)
+          if value_output > max_value:
+            max_value = value_output
+            result_position = cur_selected_position
+          
+        
+        self.go_board.apply_move(color, result_position)
+        return result_position
 
     
 

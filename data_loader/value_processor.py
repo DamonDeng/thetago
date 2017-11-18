@@ -67,7 +67,7 @@ class ValueProcessor(object):
           if not color is None and not move is None:
 
             # print('-------------------------------')
-            data,label = self.feature_and_label(color, self.winner, self.go_board, 7)
+            data,label = self.feature_and_label(color, self.winner, self.go_board)
             # print('color:'+color + '   move:'+str(move))
             
             # panenumber = 0
@@ -92,7 +92,7 @@ class ValueProcessor(object):
 
     
     @classmethod    
-    def feature_and_label(cls, color, winner, go_board, num_planes):
+    def feature_and_label(cls, color, winner, go_board):
         '''
         Parameters
         ----------
@@ -111,15 +111,16 @@ class ValueProcessor(object):
         '''
 
         # print('calling feature and label from seven pane processer')
-        
+        num_planes = 7
+
         enemy_color = go_board.other_color(color)
         if winner is None:
             label = None
         else:
-            if winner == 'b':
-                label = 0
-            else:
+            if winner == color:
                 label = 1
+            else:
+                label = 0
         
         move_array = np.zeros((num_planes, go_board.board_size, go_board.board_size))
         for row in range(0, go_board.board_size):
