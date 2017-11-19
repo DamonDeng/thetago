@@ -54,7 +54,7 @@ class ValueProcessor(object):
 
     @classmethod
     def get_label_shape(cls, batch_size):
-      return [('label', (batch_size, ))]
+      return [('softmax_label', (batch_size, ))]
 
 
     def get_generator(self):
@@ -66,6 +66,8 @@ class ValueProcessor(object):
 
           if not color is None and not move is None:
 
+            # as we are evaluating the vaule of current move, we should apply the move at first
+            self.go_board.apply_move(color, move)
             # print('-------------------------------')
             data,label = self.feature_and_label(color, self.winner, self.go_board)
             # print('color:'+color + '   move:'+str(move))
@@ -85,7 +87,7 @@ class ValueProcessor(object):
             # print(" ")
             # print(label)
 
-            self.go_board.apply_move(color, move)
+            
 
             yield data, label
           
@@ -118,8 +120,12 @@ class ValueProcessor(object):
             label = None
         else:
             if winner == color:
+                # print("winner is:"+winner+"  color is:"+color +"   label is 1")
+                # print("label is 1")
                 label = 1
             else:
+                # print("winner is:"+winner+"  color is:"+color+"   label is 0")
+                # print("label is 0")
                 label = 0
         
         move_array = np.zeros((num_planes, go_board.board_size, go_board.board_size))

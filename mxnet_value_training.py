@@ -45,7 +45,11 @@ def start_training(args):
   else:
     processor = OriginalProcessor
 
-  workers = cpu_count()
+  if args.workers == -1:  
+    workers = cpu_count()
+  else:
+    workers = args.workers
+
   print('using '+ str(workers) + " workers to load the SGF data")
   data_iter = MultiThreadSGFIter(sgf_directory=data_dir, workers=workers, batch_size=args.batchsize, file_limit = args.filelimit, processor_class=processor)
   #data_iter = SimulatorIter( batch_size=1024)
@@ -59,8 +63,11 @@ def start_training(args):
 #   print(net.list_arguments())
   
   mod = mx.mod.Module(symbol=net,
-                      context=devices,
-                      label_names=('label',))
+                      context=devices)
+
+  # mod = mx.mod.Module(symbol=net,
+  #                     context=devices,
+  #                     label_names=('label',))
 
 
   try:
@@ -123,7 +130,8 @@ def main():
     train_parser.add_argument('--gpunumber', '-g', type=int, default=1, help='number of gpu')
     train_parser.add_argument('--processor', '-r', default="OriginalProcessor", help='processor class')
     train_parser.add_argument('--evalmetric', '-m', default="acc", help='evaluate metric')
-
+    train_parser.add_argument('--workers', '-w', type=int, default=-1, help='number of cpu worker')
+   
 
     args = parser.parse_args()
 
