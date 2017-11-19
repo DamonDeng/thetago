@@ -62,12 +62,12 @@ def start_training(args):
 
 #   print(net.list_arguments())
   
-  mod = mx.mod.Module(symbol=net,
-                      context=devices)
-
   # mod = mx.mod.Module(symbol=net,
-  #                     context=devices,
-  #                     label_names=('label',))
+  #                     context=devices)
+
+  mod = mx.mod.Module(symbol=net,
+                      context=devices,
+                      label_names=('label',))
 
 
   try:

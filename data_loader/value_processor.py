@@ -54,7 +54,8 @@ class ValueProcessor(object):
 
     @classmethod
     def get_label_shape(cls, batch_size):
-      return [('softmax_label', (batch_size, ))]
+      return [('label', (batch_size, ))]
+      # return [('softmax_label', (batch_size, ))]
 
 
     def get_generator(self):
