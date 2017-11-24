@@ -75,16 +75,23 @@ class MXNetRobot:
 
     
     output = self.model.predict(data_iter)
+    output_np = output.asnumpy()[0]
+
+    print("#" + str(output.asnumpy()))
 
     position_list = self.get_move(output)
 
+    print("#" + str(position_list))
+
     # get first 10 position
     selected_position_list = []
+    selected_value_list = []
     selected_number = 0
     for position_number in position_list:
       position = self.get_position(position_number)
       if self.go_board.is_move_legal(color, position):
         selected_position_list.append(position)
+        selected_value_list.append(output_np[position_number])
         selected_number = selected_number + 1
         if selected_number >= 10:
           break
@@ -94,27 +101,37 @@ class MXNetRobot:
         return None
       else:
         self.go_board.apply_move(color, selected_position_list[0])
+        print("# possible moves:"+str(selected_position_list))
+        print("# move value:" + str(selected_value_list))
         return selected_position_list[0]
     else:
       ## should evaluate the position value here
       if len(selected_position_list) < 1:
         return None
       else:
+        print("## possible moves:"+str(selected_position_list))
+        print("## move value:" + str(selected_value_list))
+        
         value_input_data = np.zeros((1,7,19,19))  
         result_list = []
         max_value = -1
         for cur_selected_position in selected_position_list:
+          # print("## in the selected loop")
           temp_board = copy.deepcopy(self.go_board)
           temp_board.apply_move(color, cur_selected_position)
           value_data, value_label = self.value_processor_class.feature_and_label(color, None, temp_board)
           value_input_data[0] = value_data
+          
           value_data_iter = mx.io.NDArrayIter(value_input_data)
-          value_output = self.value_model.predict(value_data_iter)
-          if value_output > max_value:
-            max_value = value_output
+          value_output = self.value_model.predict(value_data_iter).asnumpy()
+          # print("## value_output of " + str(cur_selected_position) + " is:" + str(value_output[0]))
+          # print('## max value is:' + str(max_value))
+          if value_output[0] > max_value:
+            max_value = value_output[0]
             result_position = cur_selected_position
           
-        
+        print ("#result max is:"+str(max_value))
+        print ("#result position is: "+str(result_position))
         self.go_board.apply_move(color, result_position)
         return result_position
 
@@ -126,5 +143,28 @@ class MXNetRobot:
 
   def apply_move(self, color, move):
     self.go_board.apply_move(color, move)
+
+    # trying to compute the evaluation value of current board
+    value_input_data = np.zeros((1,7,19,19))  
+
+    value_data, value_label = self.value_processor_class.feature_and_label(color, None, self.go_board)
+    value_input_data[0] = value_data
+    
+    value_data_iter = mx.io.NDArrayIter(value_input_data)
+    value_output = self.value_model.predict(value_data_iter).asnumpy()
+
+    print ("# after applying move, value of "+color+" is:" + str(value_output[0]))
+
+    enemy_color = self.go_board.other_color(color)
+
+    value_data, value_label = self.value_processor_class.feature_and_label(enemy_color, None, self.go_board)
+    value_input_data[0] = value_data
+    
+    value_data_iter = mx.io.NDArrayIter(value_input_data)
+    value_output = self.value_model.predict(value_data_iter).asnumpy()
+
+    print ("# after applying move, value of "+enemy_color+" is:" + str(value_output[0]))
+
+
       
 

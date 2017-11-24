@@ -64,6 +64,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
               worker_number = worker_number + 1
               self.file_list[worker_index].append(file_path) 
 
+        print ("need to process: " + str(number_of_file-1) + " files")
         self.q = multiprocessing.Queue(maxsize=2 * self.workers)
         self.stop_q = multiprocessing.Queue()
         self.p = multiprocessing.Process(target=prepare_training_data,
@@ -106,6 +107,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
 
     def next(self):
         
+        print('calling next function to get data')
         for i in range(self.batch_size):
             try:
               data, label = self.q.get(block=True, timeout=1)
@@ -114,7 +116,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
                 raise StopIteration
             self.batch_data[i] = data
             self.batch_label[i] = label
-
+        print('got one batch of data')
         data = [mx.nd.array(self.batch_data)]
         label = [mx.nd.array(self.batch_label)]
         

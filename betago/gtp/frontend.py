@@ -103,7 +103,7 @@ class GTPFrontend(object):
     def handle_boardsize(self, size):
         if int(size) != 19:
             return response.error('Only 19x19 currently supported')
-        print ('handling boardsize')
+        print ('#handling boardsize')
         return response.success()
 
     def handle_quit(self):

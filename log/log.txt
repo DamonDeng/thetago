@@ -1,0 +1,110 @@
+[22:53:25] src/nnvm/legacy_json_util.cc:190: Loading symbol saved by previous version v0.11.0. Attempting to upgrade...
+[22:53:25] src/nnvm/legacy_json_util.cc:198: Symbol successfully upgraded!
+[22:53:25] src/nnvm/legacy_json_util.cc:190: Loading symbol saved by previous version v0.9.3. Attempting to upgrade...
+[22:53:25] src/nnvm/legacy_json_util.cc:198: Symbol successfully upgraded!
+# in the selected loop
+value_output of (15, 15) is:[ 0.84831184]
+max value is:-1
+# in the selected loop
+value_output of (15, 16) is:[ 0.84832591]
+max value is:[ 0.84831184]
+# in the selected loop
+value_output of (3, 15) is:[ 0.84831244]
+max value is:[ 0.84832591]
+# in the selected loop
+value_output of (15, 13) is:[ 0.84831202]
+max value is:[ 0.84832591]
+# in the selected loop
+value_output of (16, 15) is:[ 0.84832263]
+max value is:[ 0.84832591]
+# in the selected loop
+value_output of (9, 9) is:[ 0.84833002]
+max value is:[ 0.84832591]
+# in the selected loop
+value_output of (16, 16) is:[ 0.8483876]
+max value is:[ 0.84833002]
+# in the selected loop
+value_output of (14, 16) is:[ 0.84831518]
+max value is:[ 0.8483876]
+# in the selected loop
+value_output of (3, 3) is:[ 0.84831363]
+max value is:[ 0.8483876]
+# in the selected loop
+value_output of (2, 15) is:[ 0.84831303]
+max value is:[ 0.8483876]
+#result max is:[ 0.8483876]
+#result position is: (16, 16)
+= R17
+
+[22:59:09] src/nnvm/legacy_json_util.cc:190: Loading symbol saved by previous version v0.11.0. Attempting to upgrade...
+[22:59:09] src/nnvm/legacy_json_util.cc:198: Symbol successfully upgraded!
+[22:59:09] src/nnvm/legacy_json_util.cc:190: Loading symbol saved by previous version v0.9.3. Attempting to upgrade...
+[22:59:09] src/nnvm/legacy_json_util.cc:198: Symbol successfully upgraded!
+# in the selected loop
+# value_output of (15, 15) is:[ 0.84831184]
+# max value is:-1
+# in the selected loop
+# value_output of (15, 16) is:[ 0.84832591]
+# max value is:[ 0.84831184]
+# in the selected loop
+# value_output of (3, 15) is:[ 0.84831244]
+# max value is:[ 0.84832591]
+# in the selected loop
+# value_output of (15, 13) is:[ 0.84831202]
+# max value is:[ 0.84832591]
+# in the selected loop
+# value_output of (16, 15) is:[ 0.84832263]
+# max value is:[ 0.84832591]
+# in the selected loop
+# value_output of (9, 9) is:[ 0.84833002]
+# max value is:[ 0.84832591]
+# in the selected loop
+# value_output of (16, 16) is:[ 0.8483876]
+# max value is:[ 0.84833002]
+# in the selected loop
+# value_output of (14, 16) is:[ 0.84831518]
+# max value is:[ 0.8483876]
+# in the selected loop
+# value_output of (3, 3) is:[ 0.84831363]
+# max value is:[ 0.8483876]
+# in the selected loop
+# value_output of (2, 15) is:[ 0.84831303]
+# max value is:[ 0.8483876]
+#result max is:[ 0.8483876]
+#result position is: (16, 16)
+= R17
+
+# in the selected loop
+# value_output of (3, 3) is:[ 0.8483302]
+# max value is:-1
+# in the selected loop
+# value_output of (3, 16) is:[ 0.84834421]
+# max value is:[ 0.8483302]
+# in the selected loop
+# value_output of (2, 2) is:[ 0.84844148]
+# max value is:[ 0.84834421]
+# in the selected loop
+# value_output of (15, 3) is:[ 0.84842819]
+# max value is:[ 0.84844148]
+# in the selected loop
+# value_output of (3, 15) is:[ 0.84832281]
+# max value is:[ 0.84844148]
+# in the selected loop
+# value_output of (16, 3) is:[ 0.84851271]
+# max value is:[ 0.84844148]
+# in the selected loop
+# value_output of (2, 16) is:[ 0.84833944]
+# max value is:[ 0.84851271]
+# in the selected loop
+# value_output of (3, 2) is:[ 0.84838188]
+# max value is:[ 0.84851271]
+# in the selected loop
+# value_output of (9, 9) is:[ 0.84843016]
+# max value is:[ 0.84851271]
+# in the selected loop
+# value_output of (15, 2) is:[ 0.84842384]
+# max value is:[ 0.84851271]
+#result max is:[ 0.84851271]
+#result position is: (16, 3)
+= D17
+

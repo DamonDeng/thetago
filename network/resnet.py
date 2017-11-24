@@ -5,7 +5,6 @@ def getSymbol():
   bn_mom=0.9
 
   data = mx.symbol.Variable('data')
-  
   conv1 = mx.sym.Convolution(data=data, kernel=(3,3), num_filter=256, pad = (1,1))
   bn1 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom)
   acti1 = mx.sym.Activation(data=bn1, act_type="relu")
@@ -23,8 +22,6 @@ def getSymbol():
     temp_result = res_net + res_acti2
     res_net = temp_result
   
-  
-
   flatten = mx.sym.Flatten(data=res_net)
   fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=512)
   tanh3 = mx.sym.Activation(data=fc1, act_type="tanh")

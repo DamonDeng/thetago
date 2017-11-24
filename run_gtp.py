@@ -16,7 +16,7 @@ epoch = int(argv[2])
 
 if len(argv) > 3:
   value_file = argv[3]
-  value_epoch = argv[4]
+  value_epoch = int(argv[4])
 else:
   value_file = None
   value_epoch = None
