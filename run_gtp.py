@@ -7,7 +7,7 @@ import yaml
 from sys import argv
 from robot.mxnet_robot import MXNetRobot
 
-from betago.gtp import GTPFrontend
+from gtp import GTPFrontend
 from data_loader.original_processor import OriginalProcessor
 
 

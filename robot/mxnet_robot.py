@@ -6,6 +6,7 @@ from go_core.goboard import GoBoard
 import copy
 from data_loader.original_processor import OriginalProcessor
 from data_loader.value_processor import ValueProcessor
+from robot.mc_tree_searcher import MCTreeSearcher
 
 class MXNetRobot:
   def __init__(self, checkpoint_file, epoch, processor_class, value_file=None, value_epoch=None, value_processor_class = ValueProcessor):
@@ -77,15 +78,16 @@ class MXNetRobot:
     output = self.model.predict(data_iter)
     output_np = output.asnumpy()[0]
 
-    print("#" + str(output.asnumpy()))
+    # print("#" + str(output.asnumpy()))
 
     position_list = self.get_move(output)
 
-    print("#" + str(position_list))
+    # print("#" + str(position_list))
 
     # get first 10 position
     selected_position_list = []
     selected_value_list = []
+    max_selected_number = 30
     selected_number = 0
     for position_number in position_list:
       position = self.get_position(position_number)
@@ -93,13 +95,20 @@ class MXNetRobot:
         selected_position_list.append(position)
         selected_value_list.append(output_np[position_number])
         selected_number = selected_number + 1
-        if selected_number >= 10:
+        if selected_number >= max_selected_number:
           break
 
     if self.value_model is None:
       if len(selected_position_list) < 1:
         return None
       else:
+
+        # temp_board = copy.deepcopy(self.go_board)
+        # tree_searcher = MCTreeSearcher(temp_board, self.model, self.processor_class)
+
+        # print('## trying to search')
+        # tree_searcher.search(color)
+
         self.go_board.apply_move(color, selected_position_list[0])
         print("# possible moves:"+str(selected_position_list))
         print("# move value:" + str(selected_value_list))
@@ -144,26 +153,27 @@ class MXNetRobot:
   def apply_move(self, color, move):
     self.go_board.apply_move(color, move)
 
-    # trying to compute the evaluation value of current board
-    value_input_data = np.zeros((1,7,19,19))  
+    if self.value_model is not None:
+      # trying to compute the evaluation value of current board
+      value_input_data = np.zeros((1,7,19,19))  
 
-    value_data, value_label = self.value_processor_class.feature_and_label(color, None, self.go_board)
-    value_input_data[0] = value_data
-    
-    value_data_iter = mx.io.NDArrayIter(value_input_data)
-    value_output = self.value_model.predict(value_data_iter).asnumpy()
+      value_data, value_label = self.value_processor_class.feature_and_label(color, None, self.go_board)
+      value_input_data[0] = value_data
+      
+      value_data_iter = mx.io.NDArrayIter(value_input_data)
+      value_output = self.value_model.predict(value_data_iter).asnumpy()
 
-    print ("# after applying move, value of "+color+" is:" + str(value_output[0]))
+      print ("# after applying move, value of "+color+" is:" + str(value_output[0]))
 
-    enemy_color = self.go_board.other_color(color)
+      enemy_color = self.go_board.other_color(color)
 
-    value_data, value_label = self.value_processor_class.feature_and_label(enemy_color, None, self.go_board)
-    value_input_data[0] = value_data
-    
-    value_data_iter = mx.io.NDArrayIter(value_input_data)
-    value_output = self.value_model.predict(value_data_iter).asnumpy()
+      value_data, value_label = self.value_processor_class.feature_and_label(enemy_color, None, self.go_board)
+      value_input_data[0] = value_data
+      
+      value_data_iter = mx.io.NDArrayIter(value_input_data)
+      value_output = self.value_model.predict(value_data_iter).asnumpy()
 
-    print ("# after applying move, value of "+enemy_color+" is:" + str(value_output[0]))
+      print ("# after applying move, value of "+enemy_color+" is:" + str(value_output[0]))
 
 
       
