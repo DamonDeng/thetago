@@ -21,5 +21,13 @@ python ./mxnet_value_training.py train --data data/train --network network.resne
 python ./mxnet_training.py train --data data/train --network network.resnet --prefix checkpoint/thetago_resnet2 --epoche 100 --learningrate 0.1 --batchsize 1024 --devices gpu --filelimit 10000 --gpunumber 8
 
 
+python ./mxnet_value_training.py train --data data/train --network network.resnet_value --prefix checkpoint/value1 --epoche 1000 --learningrate 0.1 --batchsize 32 --processor ValueProcessor --filelimit 500 --evalmetric mse
+
+
+
+python ./mxnet_value_training.py train --data data/train --network network.resnet_value --prefix checkpoint/resnet_value --epoche 100 --learningrate 0.1 --batchsize 1024 --processor ValueProcessor --filelimit 50000 --evalmetric mse --devices gpu --gpunumber 8
+
+
+python ./mxnet_training.py train --data data/train --network network.resnet --prefix checkpoint/thetago_resnet3 --epoche 100 --learningrate 0.1 --batchsize 1024 --devices gpu --gpunumber 8 --evalmetric ce
 
 

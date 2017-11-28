@@ -47,7 +47,13 @@ def start_training(args):
 
   workers = cpu_count()
   print('using '+ str(workers) + " workers to load the SGF data")
-  data_iter = MultiThreadSGFIter(sgf_directory=data_dir, workers=workers, batch_size=args.batchsize, file_limit = args.filelimit, processor_class=processor)
+  data_iter = MultiThreadSGFIter(sgf_directory=data_dir, 
+                                workers=workers, 
+                                batch_size=args.batchsize, 
+                                file_limit = args.filelimit, 
+                                processor_class=processor, 
+                                level_limit=args.levellimit,
+                                player=args.player)
   #data_iter = SimulatorIter( batch_size=1024)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
  
@@ -122,6 +128,8 @@ def main():
     train_parser.add_argument('--gpunumber', '-g', type=int, default=1, help='number of gpu')
     train_parser.add_argument('--processor', '-r', default="OriginalProcessor", help='processor class')
     train_parser.add_argument('--evalmetric', '-m', default="acc", help='evaluate metric')
+    train_parser.add_argument('--levellimit', default="0d", help='player level limitation: xk,xd,xp')
+    train_parser.add_argument('--player', default="all", help='player: all, winner, loser')
 
 
     args = parser.parse_args()

@@ -6,11 +6,12 @@ import mxnet as mx
 
 class OriginalProcessor(object):
 
-    def __init__(self, sgf_file, board_size=19):
+    def __init__(self, sgf_file, board_size=19, level_limit='0d', player='all'):
         self.sgf_file = sgf_file
         self.board_col = board_size
         self.board_row = board_size
-        
+        self.level_limit = level_limit # the value should be nk, nd, np, n is the level number
+        self.player = player # the value should be 'all', 'winner' or 'loser'
         self.board_length = self.board_row * self.board_col
 
         self.go_board = GoBoard(self.board_col)
@@ -31,8 +32,8 @@ class OriginalProcessor(object):
 
 
     @classmethod
-    def get_processor(cls, sgf_file):
-      return cls(sgf_file)
+    def get_processor(cls, sgf_file, board_size=19, level_limit='0d', player='all'):
+      return cls(sgf_file, board_size, level_limit, player)
 
     @classmethod
     def get_data_shape_only(cls, batch_size):
@@ -58,24 +59,44 @@ class OriginalProcessor(object):
     def get_generator(self):
 
       # kind of urgly way to select game played by player with d or p level
-      w_level = self.sgf.get_player_level('w')
-      b_level = self.sgf.get_player_level('b')
+      if self.sgf.is_level_higher_than(self.level_limit):
 
-      if w_level is not None and b_level is not None:
-        if ('d' in w_level or 'p' in w_level) and ('d' in b_level or 'p' in b_level):
+        winner = self.sgf.get_winner()
 
-          for item in self.main_sequence_iter:
 
-            color, move = item.get_move()
+        for item in self.main_sequence_iter:
 
-            if not color is None and not move is None:
+          color, move = item.get_move()
 
-              # print('-------------------------------')
+          is_target = False
+          if self.player == 'all':
+            is_target = True
+          elif self.player == 'winner':
+            if color == winner:
+              is_target = True
+            else:
+              is_target = False
+          elif self.player == 'loser':
+            if color == winner:
+              is_target = False
+            else:
+              is_target = True
+          else:
+            # if the player is other than winner and loser, 
+            # maybe the developer call this function didn't make it right, just get all the moves.
+            is_target = True
+            
+          
+          if not color is None and not move is None:
+
+            # print('-------------------------------')
+            if is_target:
               data,label = self.feature_and_label(color, move, self.go_board, 7)
-              # print('color:'+color + '   move:'+str(move))
+            # print('color:'+color + '   move:'+str(move))
 
-              self.go_board.apply_move(color, move)
+            self.go_board.apply_move(color, move)
 
+            if is_target:
               yield data, label
           
 

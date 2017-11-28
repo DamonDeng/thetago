@@ -795,7 +795,7 @@ class Sgf_game(object):
     def get_player_level(self, colour):
         """Return the level of the specified player.
 
-        Returns None if there is no corresponding 'PB' or 'PW' property.
+        Returns None if there is no corresponding 'BR' or 'WR' property.
 
         """
         try:
@@ -803,6 +803,49 @@ class Sgf_game(object):
                 {'b': b'BR', 'w': b'WR'}[colour]).decode(self.presenter.encoding)
         except KeyError:
             return None
+    
+    @classmethod
+    def convert_level_to_number(cls, level):
+        # return number 0 if no level is provided
+        if level is None:
+            return 0
+
+        level_class = level[-1:]
+        level_number = str(level[:-1])
+
+        target_level = 0
+
+        if level_class == 'p':
+            target_level = level_number * 10
+        elif level_class == 'd':
+            target_level = level_number
+        else:
+            target_level = level_number * -1
+        
+        return target_level
+
+
+    def is_level_higher_than(self, level):
+        
+        try:
+            if not (level.endswith('k') or level.endswith('d') or level.endswith('p')):
+                return True
+
+            b_level = self.get_player_level('b')
+            w_level = self.get_player_level('w')
+
+            if self.convert_level_to_number(level) > self.convert_level_to_number(b_level):
+                return False
+            elif self.convert_level_to_number(level) > self.convert_level_to_number(w_level):
+                return False
+
+            return True
+
+        except:
+            # anything went wrong, just return true, to take this game as a high level game
+            return True 
+
+
 
 
     def get_winner(self):

@@ -27,10 +27,12 @@ import six.moves.queue as queue
 
 
 class MultiThreadSGFIter(mx.io.DataIter):
-    def __init__(self, sgf_directory, workers=1, batch_size=30, file_limit = -1, processor_class=FeatureProcessor):
+    def __init__(self, sgf_directory, workers=1, batch_size=30, file_limit = -1, processor_class=FeatureProcessor, level_limit='0d', player='all'):
         self.sgf_directory = sgf_directory
         self.workers=workers
         self.batch_size = batch_size
+        self.level_limit = level_limit
+        self.player = player
         
         self.board_col = 19
         self.board_row = 19
@@ -68,7 +70,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
         self.q = multiprocessing.Queue(maxsize=2 * self.workers)
         self.stop_q = multiprocessing.Queue()
         self.p = multiprocessing.Process(target=prepare_training_data,
-                                    args=(self.workers, self.file_list, self.processor_class, self.q, self.stop_q))
+                                    args=(self.workers, self.file_list, self.processor_class, self.q, self.stop_q, self.level_limit, self.player))
         self.p.start()
 
         # self.generator = self.get_generator()
@@ -88,7 +90,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
       self.q = multiprocessing.Queue(maxsize=2 * self.workers)
       self.stop_q = multiprocessing.Queue()
       self.p = multiprocessing.Process(target=prepare_training_data,
-                                  args=(self.workers, self.file_list, self.processor_class, self.q, self.stop_q))
+                                  args=(self.workers, self.file_list, self.processor_class, self.q, self.stop_q, self.level_limit, self.player))
       self.p.start()
       # print('after trying to run the thread')
 
@@ -107,7 +109,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
 
     def next(self):
         
-        print('calling next function to get data')
+        # print('calling next function to get data')
         for i in range(self.batch_size):
             try:
               data, label = self.q.get(block=True, timeout=1)
@@ -116,7 +118,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
                 raise StopIteration
             self.batch_data[i] = data
             self.batch_label[i] = label
-        print('got one batch of data')
+        # print('got one batch of data')
         data = [mx.nd.array(self.batch_data)]
         label = [mx.nd.array(self.batch_label)]
         
@@ -137,14 +139,14 @@ class MultiThreadSGFIter(mx.io.DataIter):
 
                 
    
-def prepare_training_data(workers, file_list, processor_class, output_q, stop_q):
+def prepare_training_data(workers, file_list, processor_class, output_q, stop_q, level_limit='0d', player='all'):
   _disable_keyboard_interrupt()
   workers = []
   
   for inter_file_list in file_list:
       workers.append(multiprocessing.Process(
           target=_prepare_training_data_single_process,
-          args=(inter_file_list, processor_class, output_q, stop_q)))
+          args=(inter_file_list, processor_class, output_q, stop_q, level_limit, player)))
 
   for worker in workers:
       worker.start()
@@ -155,13 +157,13 @@ def prepare_training_data(workers, file_list, processor_class, output_q, stop_q)
   stop_q.put(1)
 
 
-def _prepare_training_data_single_process(inter_file_list, processor_class, output_q, stop_q):
+def _prepare_training_data_single_process(inter_file_list, processor_class, output_q, stop_q, level_limit='0d', player='all'):
   # Make sure ^C gets handled in the main process.
   _disable_keyboard_interrupt()
 
   for file_name in inter_file_list:
 
-    processor = processor_class.get_processor(file_name)
+    processor = processor_class.get_processor(file_name, level_limit=level_limit, player=player)
 
     features = processor.get_generator()
 
