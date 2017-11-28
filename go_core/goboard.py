@@ -29,6 +29,11 @@ class GoBoard(object):
         self.board_size = board_size
         self.board = {}
         self.go_strings = {}
+        self.is_eye = {}
+        self.is_true_eye = {}
+        self.stone_state = {}
+
+        self.update_states()
         
 
     @property
@@ -71,6 +76,15 @@ class GoBoard(object):
         return (not self.is_move_on_board(pos)) and \
             (not self.is_move_suicide(color, pos)) and \
             (not self.is_simple_ko(color, pos))
+
+    def is_my_eye(self, color, pos):
+      if color == 'b':
+        if self.is_true_eye[pos] == 1:
+          return True
+      elif color == 'w':
+        if self.is_true_eye[pos] == 2:
+          return True
+      return False
 
     def create_go_string(self, color, pos):
         ''' Create GoString from current Board and move '''
@@ -185,6 +199,236 @@ class GoBoard(object):
         # Store last move for ko
         self.ko_last_move = pos
 
+        self.update_states()
+
+    def update_states(self):
+
+      max_pos_number = self.board_size - 1
+
+      # update the stone state at first:
+      for row in range(self.board_size):
+        for col in range(self.board_size):
+          cur_color = self.board.get((row, col))
+          if cur_color is not None:
+            # setting stone state base on the stone color of current pos
+            if cur_color == 'b':
+              self.stone_state[(row, col)] = 1
+            elif cur_color == 'w':
+              self.stone_state[(row, col)] = 2
+            else:
+              self.stone_state[(row, col)] = 100 # it is an error
+          else:
+            # set stone state of current pos to 0 as there is no stone in current pos
+            self.stone_state[(row, col)] = 0
+
+
+      for row in range(self.board_size):
+        for col in range(self.board_size):
+          
+          if self.stone_state[(row, col)] != 0:
+            # current pos is not empty, it could not be an eye
+            self.is_eye[(row, col)] = 0
+
+          else:
+            # try to compute whether current pos is an eye
+            neighbours = []
+            diagonals = []
+            position_type = 'normal' # should be 'corner' 'edge' 'normal'
+
+            # the following code should be wrapped into a function:
+            # or you can use the feature of set to clean the following code
+            if row == 0:
+              if col == 0:
+                # bottom left corner
+                neighbours.append(self.stone_state[(row+1, col)])
+                neighbours.append(self.stone_state[(row, col+1)])
+                diagonals.append(self.stone_state[(row+1, col+1)])
+                position_type = 'corner'
+              elif col == max_pos_number:
+                # bottom right corner
+                neighbours.append(self.stone_state[(row+1, col)])
+                neighbours.append(self.stone_state[(row, col-1)])
+                diagonals.append(self.stone_state[(row+1, col-1)])
+                position_type = 'corner'
+              else:
+                # bottom edge
+                neighbours.append(self.stone_state[(row+1, col)])
+                neighbours.append(self.stone_state[(row, col+1)])
+                neighbours.append(self.stone_state[(row, col-1)])
+                
+                diagonals.append(self.stone_state[(row+1, col+1)])
+                diagonals.append(self.stone_state[(row+1, col-1)])
+                
+                position_type = 'edge'
+            elif row == max_pos_number:
+              if col == 0:
+                # up left corner
+                neighbours.append(self.stone_state[(row-1, col)])
+                neighbours.append(self.stone_state[(row, col+1)])
+                
+                diagonals.append(self.stone_state[(row-1, col+1)])
+                
+                position_type = 'corner'
+              
+              elif col == max_pos_number:
+                # up right corner
+                neighbours.append(self.stone_state[(row-1, col)])
+                neighbours.append(self.stone_state[(row, col-1)])
+                
+                diagonals.append(self.stone_state[(row-1, col-1)])
+                
+                position_type = 'corner'
+              else:
+                # up edge
+                neighbours.append(self.stone_state[(row-1, col)])
+                neighbours.append(self.stone_state[(row, col+1)])
+                neighbours.append(self.stone_state[(row, col-1)])
+                
+                diagonals.append(self.stone_state[(row-1, col+1)])
+                diagonals.append(self.stone_state[(row-1, col-1)])
+                
+                position_type = 'edge'
+            else:
+              if col == 0:
+                # left edge
+                neighbours.append(self.stone_state[(row-1, col)])
+                neighbours.append(self.stone_state[(row+1, col)])
+                neighbours.append(self.stone_state[(row, col+1)])
+                
+                diagonals.append(self.stone_state[(row+1, col+1)])
+                diagonals.append(self.stone_state[(row-1, col+1)])
+                
+                position_type = 'edge'
+              elif col == max_pos_number:
+                # right edge
+                neighbours.append(self.stone_state[(row-1, col)])
+                neighbours.append(self.stone_state[(row+1, col)])
+                neighbours.append(self.stone_state[(row, col-1)])
+                
+                diagonals.append(self.stone_state[(row+1, col-1)])
+                diagonals.append(self.stone_state[(row-1, col-1)])
+                position_type = 'edge'
+              else:
+                # middle
+                neighbours.append(self.stone_state[(row-1, col)])
+                neighbours.append(self.stone_state[(row+1, col)])
+                neighbours.append(self.stone_state[(row, col+1)])
+                neighbours.append(self.stone_state[(row, col-1)])
+                
+                
+                diagonals.append(self.stone_state[(row+1, col+1)])
+                diagonals.append(self.stone_state[(row-1, col+1)])
+                diagonals.append(self.stone_state[(row+1, col-1)])
+                diagonals.append(self.stone_state[(row-1, col-1)])
+
+                position_type = 'normal'
+
+            neighbour_color = 0
+            get_color_before = False
+            
+            has_empty = False
+            different_color = False
+
+            for neighbour in neighbours:
+              if neighbour == 0:
+                has_empty = True
+                break
+              
+              if get_color_before:
+                if neighbour_color != neighbour:
+                  different_color = True
+                  break
+              else:
+                neighbour_color = neighbour
+                get_color_before = True
+            
+            if has_empty or different_color:
+              self.is_eye[(row, col)] = 0
+            else:
+              # current pos is surrounded by same color, trying to caculate the diagnoal
+              bad_diagnoal_number = 0
+              empty_bad_diagnoal_number = 0
+              for diagonal in diagonals:
+                if diagonal != neighbour_color:
+                  bad_diagnoal_number = bad_diagnoal_number + 1
+                if diagonal == 0:
+                  empty_bad_diagnoal_number = empty_bad_diagnoal_number + 1
+
+              if position_type == 'corner':
+                if bad_diagnoal_number == 0:
+                  self.is_eye[(row, col)] = neighbour_color
+                else:
+                  if empty_bad_diagnoal_number == 0:
+                    self.is_eye[(row, col)] = 0
+                  else:
+                    # need to check whether there is adjacent eye to protect it
+                    self.is_eye[(row, col)] = neighbour_color + 10
+              elif position_type == 'edge':
+                if bad_diagnoal_number == 0:
+                  self.is_eye[(row, col)] = neighbour_color
+                elif bad_diagnoal_number == 2:
+                  self.is_eye[(row, col)] = 0
+                else:
+                  if empty_bad_diagnoal_number == 0:
+                    self.is_eye[(row, col)] = 0
+                  else:
+                    # need to check whether there is adjacent eye to protect it
+                    self.is_eye[(row, col)] = neighbour_color + 10
+              else:
+                if bad_diagnoal_number < 2:
+                  self.is_eye[(row, col)] = neighbour_color
+                elif bad_diagnoal_number > 2:
+                  self.is_eye[(row, col)] = 0
+                else:
+                
+                  # need to check whether there is adjacent eye to protect it
+                  self.is_eye[(row, col)] = neighbour_color + 10
+                
+      for row in range(self.board_size):
+        for col in range(self.board_size):
+          if self.is_eye[(row, col)] == 11:
+            diagonals = []
+            diagonals.append(self.is_eye.get((row-1, col-1)))
+            diagonals.append(self.is_eye.get((row-1, col+1)))
+            diagonals.append(self.is_eye.get((row+1, col-1)))
+            diagonals.append(self.is_eye.get((row+1, col+1)))
+
+            is_true_eye = False
+            for diagonal in diagonals:
+              if diagonal is not None:
+                if diagonal == 11:
+                  is_true_eye = True
+
+            if is_true_eye:
+              self.is_true_eye[(row, col)] = 1
+            else:
+              self.is_true_eye[(row, col)] = 0
+          
+          elif self.is_eye[(row, col)] == 12:
+            # print('found 12')
+            diagonals = []
+            diagonals.append(self.is_eye.get((row-1, col-1)))
+            diagonals.append(self.is_eye.get((row-1, col+1)))
+            diagonals.append(self.is_eye.get((row+1, col-1)))
+            diagonals.append(self.is_eye.get((row+1, col+1)))
+
+            is_true_eye = False
+            for diagonal in diagonals:
+              if diagonal is not None:
+                # print ('d:'+str(diagonal))
+                if diagonal == 12:
+                  is_true_eye = True
+
+            if is_true_eye:
+              self.is_true_eye[(row, col)] = 2
+            else:
+              self.is_true_eye[(row, col)] = 0
+          
+          else:
+            self.is_true_eye[(row, col)] = self.is_eye.get((row, col))        
+            
+
+
     def add_liberty_to_adjacent_string(self, string_pos, liberty_pos, color):
         ''' Insert liberty into corresponding GoString '''
         if self.board.get(string_pos) != color:
@@ -238,6 +482,47 @@ class GoBoard(object):
                     line = line + '*'
                 if thispiece == 'w':
                     line = line + 'O'
+            result = result + line + '\n'
+        return result
+    
+    def get_eye_state(self):
+        result = 'eye_state\n'
+        for i in range(self.board_size - 1, -1, -1):
+            line = ''
+            for j in range(0, self.board_size):
+                thispiece = self.is_eye.get((i, j))
+                if thispiece is None:
+                    line = line + '.'
+                if thispiece == 0:
+                    line = line + '.'
+                if thispiece == 1:
+                    line = line + '*'
+                if thispiece == 2:
+                    line = line + 'O'
+                if thispiece == 11:
+                    line = line + '&'
+                if thispiece == 12:
+                    line = line + '@'
+                    
+            result = result + line + '\n'
+        return result
+    
+    def get_true_eye_state(self):
+        result = 'true_eye_state\n'
+        for i in range(self.board_size - 1, -1, -1):
+            line = ''
+            for j in range(0, self.board_size):
+                thispiece = self.is_true_eye.get((i, j))
+                if thispiece is None:
+                    line = line + '.'
+                if thispiece == 0:
+                    line = line + '.'
+                if thispiece == 1:
+                    line = line + '*'
+                if thispiece == 2:
+                    line = line + 'O'
+                
+                    
             result = result + line + '\n'
         return result
 

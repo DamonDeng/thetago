@@ -87,16 +87,17 @@ class MXNetRobot:
     # get first 10 position
     selected_position_list = []
     selected_value_list = []
-    max_selected_number = 30
+    max_selected_number = 2
     selected_number = 0
     for position_number in position_list:
       position = self.get_position(position_number)
       if self.go_board.is_move_legal(color, position):
-        selected_position_list.append(position)
-        selected_value_list.append(output_np[position_number])
-        selected_number = selected_number + 1
-        if selected_number >= max_selected_number:
-          break
+        if not self.go_board.is_my_eye(color, position):
+          selected_position_list.append(position)
+          selected_value_list.append(output_np[position_number])
+          selected_number = selected_number + 1
+          if selected_number >= max_selected_number:
+            break
 
     if self.value_model is None:
       if len(selected_position_list) < 1:
@@ -110,8 +111,8 @@ class MXNetRobot:
         # tree_searcher.search(color)
 
         self.go_board.apply_move(color, selected_position_list[0])
-        print("# possible moves:"+str(selected_position_list))
-        print("# move value:" + str(selected_value_list))
+        # print("# possible moves:"+str(selected_position_list))
+        # print("# move value:" + str(selected_value_list))
         return selected_position_list[0]
     else:
       ## should evaluate the position value here
@@ -141,6 +142,8 @@ class MXNetRobot:
           
         print ("#result max is:"+str(max_value))
         print ("#result position is: "+str(result_position))
+
+
         self.go_board.apply_move(color, result_position)
         return result_position
 
