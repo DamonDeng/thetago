@@ -7,6 +7,7 @@ import copy
 from data_loader.original_processor import OriginalProcessor
 from data_loader.value_processor import ValueProcessor
 from robot.mc_tree_searcher import MCTreeSearcher
+from go_core.space_manager import SpaceManager
 
 class MXNetRobot:
   def __init__(self, checkpoint_file, epoch, processor_class, value_file=None, value_epoch=None, value_processor_class = ValueProcessor):
@@ -25,11 +26,16 @@ class MXNetRobot:
       self.value_model = value_mod
     
     self.go_board = GoBoard(19)
+    self.space_manager = SpaceManager(19)
+    print (self.space_manager)
     self.processor_class = processor_class
     self.value_processor_class = value_processor_class
     
   def set_board(self, board):
     self.go_board = copy.deepcopy(board)
+
+  def get_board(self):
+    return self.go_board
 
   def reset_board(self):
     self.go_board = GoBoard(19)
@@ -41,6 +47,7 @@ class MXNetRobot:
     return (row, col)
 
   def get_move(self, predict_result):
+    # sort the predict result and return
     output_numpy = predict_result.asnumpy()
 
     output_numpy = np.squeeze(output_numpy)
@@ -111,6 +118,9 @@ class MXNetRobot:
         # tree_searcher.search(color)
 
         self.go_board.apply_move(color, selected_position_list[0])
+        self.space_manager.apply_move(color, selected_position_list[0])
+        print (self.space_manager)
+
         # print("# possible moves:"+str(selected_position_list))
         # print("# move value:" + str(selected_value_list))
         return selected_position_list[0]
@@ -145,6 +155,9 @@ class MXNetRobot:
 
 
         self.go_board.apply_move(color, result_position)
+        self.space_manager.apply_move(color, result_position)
+        print (self.space_manager)
+
         return result_position
 
     
@@ -154,7 +167,10 @@ class MXNetRobot:
 
 
   def apply_move(self, color, move):
+    print ("# applying move: " + color + " " + str(move))
     self.go_board.apply_move(color, move)
+    self.space_manager.apply_move(color, move)
+    print (self.space_manager)
 
     if self.value_model is not None:
       # trying to compute the evaluation value of current board
@@ -180,4 +196,8 @@ class MXNetRobot:
 
 
       
+  def get_score(self):
+    return self.space_manager.get_score()
 
+  def analyst_result(self):
+    self.space_manager.analyst_result()

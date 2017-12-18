@@ -52,6 +52,12 @@ class OriginalProcessor(object):
       return [('data',(batch_size, 7, board_row, board_col))]
 
     @classmethod
+    def get_single_data_shape(cls):
+      board_col = 19
+      board_row = 19
+      return [('data',(1, 7, board_row, board_col))]
+
+    @classmethod
     def get_label_shape(cls, batch_size):
       return [('softmax_label', (batch_size, ))]
 

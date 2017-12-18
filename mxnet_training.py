@@ -64,8 +64,12 @@ def start_training(args):
 
   # print(net.list_arguments())
   
-  mod = mx.mod.Module(symbol=net,
-                      context=devices)
+  if args.oldmodel == 'keyword_none':
+    mod = mx.mod.Module(symbol=net,
+                        context=devices)
+  else:
+    
+    mod = mx.mod.Module.load(args.oldmodel, args.oldepoche)
 
 
   try:
@@ -130,6 +134,8 @@ def main():
     train_parser.add_argument('--evalmetric', '-m', default="acc", help='evaluate metric')
     train_parser.add_argument('--levellimit', default="0d", help='player level limitation: xk,xd,xp')
     train_parser.add_argument('--player', default="all", help='player: all, winner, loser')
+    train_parser.add_argument('--oldmodel', default="keyword_none", help='the old model you want to load')
+    train_parser.add_argument('--oldepoche', default=0, type=int, help='the epoche of old model')
 
 
     args = parser.parse_args()
