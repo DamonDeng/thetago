@@ -11,6 +11,8 @@ from go_core.space_manager import SpaceManager
 
 class MXNetRobot:
   def __init__(self, checkpoint_file, epoch, processor_class, value_file=None, value_epoch=None, value_processor_class = ValueProcessor):
+    self.board_size = 19
+
     sym, arg_params, aux_params = mx.model.load_checkpoint(checkpoint_file, epoch)
     mod = mx.mod.Module(symbol=sym, label_names=None, context=mx.cpu(0))
     mod.bind(for_training=False, data_shapes=[('data', (1,7,19,19))], label_shapes=mod._label_shapes)
@@ -25,24 +27,24 @@ class MXNetRobot:
       value_mod.set_params(value_arg_params, value_aux_params, allow_missing=True)
       self.value_model = value_mod
     
-    self.go_board = GoBoard(19)
-    self.space_manager = SpaceManager(19)
-    print (self.space_manager)
+    self.go_board = GoBoard(self.board_size)
+    # self.space_manager = SpaceManager(19)
+    # print (self.space_manager)
     self.processor_class = processor_class
     self.value_processor_class = value_processor_class
     
-  def set_board(self, board):
-    self.go_board = copy.deepcopy(board)
+  def reset_board(self, board_size):
+    self.go_board.reset(board_size)
 
   def get_board(self):
     return self.go_board
 
   def reset_board(self):
-    self.go_board = GoBoard(19)
+    self.go_board = GoBoard(self.board_size)
 
   def get_position(self, input_number):
-    row = int(input_number/19)
-    col = input_number%19
+    row = int(input_number/self.board_size)
+    col = input_number%self.board_size
 
     return (row, col)
 
@@ -59,21 +61,6 @@ class MXNetRobot:
   def select_move(self, color):
 
     data,label = self.processor_class.feature_and_label(color, (0,0), self.go_board, 7)
-
-    # panenumber = 0
-    # for pane in data:
-    #   rownumber = 0
-    #   for row in pane:
-    #     columnnumber = 0
-    #     for column in row:
-    #       if column != 0:
-    #         print("("+str(panenumber)+","+str(columnnumber)+","+str(rownumber)+"):" + str(column)),
-    #       columnnumber = columnnumber + 1 
-    #     rownumber = rownumber + 1
-    #   panenumber = panenumber + 1
-    
-    # print(" ")
-    # print(label)
 
     input_data = np.zeros((1,7,19,19))
     
@@ -118,8 +105,8 @@ class MXNetRobot:
         # tree_searcher.search(color)
 
         self.go_board.apply_move(color, selected_position_list[0])
-        self.space_manager.apply_move(color, selected_position_list[0])
-        print (self.space_manager)
+        # self.space_manager.apply_move(color, selected_position_list[0])
+        # print (self.space_manager)
 
         # print("# possible moves:"+str(selected_position_list))
         # print("# move value:" + str(selected_value_list))
@@ -155,8 +142,8 @@ class MXNetRobot:
 
 
         self.go_board.apply_move(color, result_position)
-        self.space_manager.apply_move(color, result_position)
-        print (self.space_manager)
+        # self.space_manager.apply_move(color, result_position)
+        # print (self.space_manager)
 
         return result_position
 
@@ -169,8 +156,8 @@ class MXNetRobot:
   def apply_move(self, color, move):
     print ("# applying move: " + color + " " + str(move))
     self.go_board.apply_move(color, move)
-    self.space_manager.apply_move(color, move)
-    print (self.space_manager)
+    # self.space_manager.apply_move(color, move)
+    # print (self.space_manager)
 
     if self.value_model is not None:
       # trying to compute the evaluation value of current board
@@ -197,7 +184,7 @@ class MXNetRobot:
 
       
   def get_score(self):
-    return self.space_manager.get_score()
+    return self.go_board.get_score()
 
   def analyst_result(self):
-    self.space_manager.analyst_result()
+    self.go_board.analyst_result()

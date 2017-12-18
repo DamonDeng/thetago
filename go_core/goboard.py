@@ -1,658 +1,721 @@
-# This Source Code Form is subject to the terms of the Mozilla Public License,
-# v. 2.0. If a copy of the MPL was not distributed with this file, You can
-# obtain one at http://mozilla.org/MPL/2.0/.
-
-from __future__ import absolute_import
-import copy
-from six.moves import range
-# from queue import Queue
 import numpy as np
-
-
+import copy
 
 class GoBoard(object):
-    '''
-    Representation of a go board. It contains "GoStrings" to represent stones and liberties. Moreover,
-    the board can account for ko and handle captured stones.
-    '''
-    def __init__(self, board_size=19):
-        '''
-        Parameters
-        ----------
-        ko_last_move_num_captured: How many stones have been captured last move. If this is not 1, it can't be ko.
-        ko_last_move: board position of the ko.
-        board_size: Side length of the board, defaulting to 19.
-        go_strings: Dictionary of go_string objects representing stones and liberties.
-        '''
-        self.ko_last_move_num_captured = 0
-        self.ko_last_move = -3
-        self.board_size = board_size
-        self.board = {}
-        self.go_strings = {}
-        self.is_eye = {}
-        self.is_true_eye = {}
-        self.stone_state = {}
 
-        self.update_states()
+  def __init__(self, board_size=19):
+    self.reset(board_size)
+
+  def reset(self, board_size):        
+    self.history_length = 2
+    self.pane_number = 8
+
+    # states attribute will keep all the states panes 
+    # shpae of states: (history_length, pane_number, board_size, board_size)
+    # pane_index:
+    # 0: color: 0 for empty, 1 for black, 2 for white
+    # 1: group_empty: number of empty current point has
+    # 2: group_black: number of black current ponit has
+    # 3: group_white: number of white current point has
+    # 4: 
+    self.states = np.zeros((self.history_length, self.pane_number, board_size, board_size))
+    self.history_index = 0
+
+    
+    self.board_size = board_size
+
+    self.group_reporters = {}
+
+    self.group_id_index = 0 # the first group id is 0, which is used in comming initing code.
+
+    self.all_points = {}
+
+    for row in range(self.board_size):
+      for col in range(self.board_size):
+        cur_point = Point(0, (row,col))
+        self.all_points[(row, col)] = cur_point
+    
+    self.connect_all_points()
+
+    empty_color = 0
+    working_group_id = 0
+    point = self.all_points.get((0,0))
+    reporter = Reporter(working_group_id, empty_color)
+    reporter = self.update_group(point, empty_color, working_group_id, reporter)
+    # print ('# update finished, reporter empty number: ' + str(reporter.get_empty_number()))
+    self.group_reporters[working_group_id] = reporter
+
+    self.last_move = None # last move format: (pos, color_value)
+    self.last_remove = set() # init the last remove stones , it is a set.
+
+
+
+  def apply_move(self, color, pos):
+    # apply move to position
+    print('# applying move: ' + color + "  " + str(pos))
+    cur_point = self.all_points.get(pos)
+    if cur_point is None:
+      # incorrect position, return
+      return
+
+    if cur_point.get_color() != 0:
+      # not empty, return
+      return
+    
+    up_point = cur_point.get_up()
+    down_point = cur_point.get_down()
+    left_point = cur_point.get_left()
+    right_point = cur_point.get_right()
+
+    # get color value and enemy color value of current point
+    cur_color_value = self.get_color_value(color)
+    enemy_color_value = self.get_enemy_color_value(color)
+
+    # check whether the move is suicide
+    if self.is_suicide(cur_color_value, pos):
+      print('# warning: suicide move detected!!')
+      return
+
+    if self.is_ko(cur_color_value, pos):
+      print('# warning: ko move detected!!')
+      return
+    
+    # setting the color of current point.
+    cur_point.set_color(cur_color_value)
+
+    self.last_move = (pos, cur_color_value) # remember last move
+    self.last_remove = set() # clear all the elements in last remove, so that we can add new ones
+
+
+    # get point group id for current point and set to current point
+    point_group_id = self.get_group_id_index()
+    # cur_point.set_group_id(point_group_id)
+    # update the point around if they have the same color with current point
+    reporter = Reporter(point_group_id, cur_color_value)
+    # add current point into the new group at first
+    # reporter.add_point(cur_color_value, pos)
+
+    # try to merge the friend point around
+    # reporter = self.handle_friend_point(up_point, cur_color_value, point_group_id, reporter)
+    # reporter = self.handle_friend_point(down_point, cur_color_value, point_group_id, reporter)
+    # reporter = self.handle_friend_point(left_point, cur_color_value, point_group_id, reporter)
+    # reporter = self.handle_friend_point(right_point, cur_color_value, point_group_id, reporter)
+    # save the reporter of current point
+
+    reporter = self.update_group(cur_point, cur_color_value, point_group_id, reporter)
+    self.group_reporters[point_group_id] = reporter
+    # reporter.print_debug_info()
+    
+    # remove the enemy aound if they have only one empty point
+    # and current point is the only empty point they have
+    # decrese empty point number if it is not the only empty point they have
+    self.handle_enemy_point(up_point, enemy_color_value, cur_color_value, pos)
+    self.handle_enemy_point(down_point, enemy_color_value, cur_color_value, pos)
+    self.handle_enemy_point(left_point, enemy_color_value, cur_color_value, pos)
+    self.handle_enemy_point(right_point, enemy_color_value, cur_color_value, pos)
+  
+    # ---------------------------------
+    # update the empty space group
+
+    # normal group id start from 0
+    # for the point where stones are just removed, the group id is -1
+    # setting working_group_id to -2, so that it wouldn't be any group id is equal to the init group id
+    # working_group_id = -2
+    working_group_id_set = set()
+    # working_group_id_set.add(working_group_id)
+    
+    working_group_id_set = self.handle_space_point(up_point, working_group_id_set)
+    working_group_id_set = self.handle_space_point(down_point, working_group_id_set)
+    working_group_id_set = self.handle_space_point(left_point, working_group_id_set)
+    working_group_id_set = self.handle_space_point(right_point, working_group_id_set) 
+
+  def handle_friend_point(self, point, cur_color_value, point_group_id, reporter):
+    if point != None and point.get_color() == cur_color_value:  
+        reporter = self.update_group(point, cur_color_value, point_group_id, reporter)
+    return reporter
+
+  def handle_enemy_point(self, point, enemy_color_value, cur_color_value, cur_pos):
+    # remove the enemy aound if they have only one empty point
+    # and current point is the only empty point they have
+    # decrese empty point number if it is not the only empty point they have
+    if point != None and point.get_color() == enemy_color_value:  
+      enemy_group_reporter = self.group_reporters.get(point.get_group_id())
+      if enemy_group_reporter != None: 
+        # enemy_group_reporter.print_debug_info()
+        # print('# empty point of:' + str(point.get_pos()) + " is :" + str(enemy_group_reporter.get_empty_number()))
+        if enemy_group_reporter.is_the_only_empty(cur_pos): #get_empty_number() == 1:
+          # if the empty point removed is the only empty point enemy group has, start to remove the group
+          working_stack = copy.deepcopy(enemy_group_reporter.get_stack(enemy_color_value))
+          # print('# trying to remove: ' + str(working_stack))
+          for target_pos in working_stack:
+            # get target point base on target pos
+            target_point = self.all_points.get(target_pos)
+            # set target point's color to 0, so it is removed
+            target_point.set_color(0)
+            # remember last move stones, so that we can caculate ko
+            self.last_remove.add(target_pos)
+            # set the group id of target point to -1, so that we can upgrade the new empty group
+            target_point.set_group_id(-1)
+            self.update_removed_empty_point(enemy_color_value, target_point)
+        else:
+          enemy_group_reporter.remove_empty(cur_color_value, cur_pos)
+
+  def update_removed_empty_point(self, removed_color, target_point):
+    # current point was removed from board
+    # need to update the black stack and white stack for point around current point.
+    up_point = target_point.get_up()
+    down_point = target_point.get_down()
+    left_point = target_point.get_left()
+    right_point = target_point.get_right()
+
+    if up_point != None:
+      if up_point.get_group_id() != -1: # not the empty one in the point just removed
+        reporter = self.group_reporters.get(up_point.get_group_id())
+        reporter.remove_color(removed_color, target_point.get_pos())
+    
+    if down_point != None:
+      if down_point.get_group_id() != -1: # not the empty one in the point just removed
+        reporter = self.group_reporters.get(down_point.get_group_id())
+        reporter.remove_color(removed_color, target_point.get_pos())
+
+    if left_point != None:
+      if left_point.get_group_id() != -1: # not the empty one in the point just removed
+        # print('left point is being handled:' + str(left_point.get_pos()))
+        reporter = self.group_reporters.get(left_point.get_group_id())
+        # print('before remove: ' + str(reporter.get_empty_number()))
+        reporter.remove_color(removed_color, target_point.get_pos())
+        # print('after remove: ' + str(reporter.get_empty_number()))
+
+    if right_point != None:
+      if right_point.get_group_id() != -1: # not the empty one in the point just removed
+        reporter = self.group_reporters.get(right_point.get_group_id())
+        reporter.remove_color(removed_color, target_point.get_pos())
+
+
+  def handle_space_point(self, point, working_group_id_set):
+    # update the space point around current point
+    empty_color = 0
+    if point != None:
+      if point.get_color() == 0:
+        if not point.get_group_id() in working_group_id_set:
+          working_group_id = self.get_group_id_index()
+          working_group_id_set.add(working_group_id)
+          reporter = Reporter(working_group_id, empty_color)
+          reporter = self.update_group(point, empty_color, working_group_id, reporter)
+          self.group_reporters[working_group_id] = reporter
+    return working_group_id_set
+
+
+  def update_group(self, cur_point, color_value, group_id, reporter):
+    
+    if cur_point == None:
+      # hit the age of board, return directly
+      return reporter
+
+    # print ('# update:' + str(cur_point.get_pos()) + ' color:' + str(color_value) + ' group_id:' + str(group_id))
+    # add current point into the reporter history base on the value of current color:
+    if cur_point.get_color() == 0:
+      # print ('# trying to update reporter with color 0')
+      # print ('# reporter empty number:' + str(reporter.get_empty_number()))
+      
+      reporter.add_empty(cur_point.get_pos())
+    elif cur_point.get_color() == 1:
+      reporter.add_black(cur_point.get_pos())
+    elif cur_point.get_color() == 2:
+      reporter.add_white(cur_point.get_pos())
+
+    # update the points around current point
+    if cur_point.get_color() == color_value and cur_point.get_group_id() != group_id:
+      cur_point.set_group_id(group_id)
+    
+      up_point = cur_point.get_up()
+      down_point = cur_point.get_down()
+      left_point = cur_point.get_left()
+      right_point = cur_point.get_right()
+
+      reporter = self.update_group(up_point, color_value, group_id, reporter)
+      reporter = self.update_group(down_point, color_value, group_id, reporter)
+      reporter = self.update_group(left_point, color_value, group_id, reporter)
+      reporter = self.update_group(right_point, color_value, group_id, reporter)
+    
+    return reporter
+
+    
+  def is_suicide(self, color_value, pos):
+    # @todo, implement this method to check whether the move is suicide.
+    result = False
+    cur_point = self.all_points.get(pos)
+    empty_group_reporter = self.group_reporters.get(cur_point.get_group_id())
+
+    if empty_group_reporter.is_the_only_empty(pos):
+      if empty_group_reporter.get_stack_len(color_value) == 0:
+        # no stone has same color with cur color, it may be suicide
+        # need to check whether current move can kill one of the neighbour
+        up_point = cur_point.get_up()
+        down_point = cur_point.get_down()
+        left_point = cur_point.get_left()
+        right_point = cur_point.get_right()
+
+        if self.can_kill_neighbour(up_point, color_value, pos) or \
+          self.can_kill_neighbour(down_point, color_value, pos) or \
+          self.can_kill_neighbour(left_point, color_value, pos) or \
+          self.can_kill_neighbour(right_point, color_value, pos):
+          result = False
+        else:
+          result = True
         
+      else:
+        up_point = cur_point.get_up()
+        down_point = cur_point.get_down()
+        left_point = cur_point.get_left()
+        right_point = cur_point.get_right()
 
-    @property
-    def board_state(self):
-        return self.board
+        if self.is_suicide_neighbour(up_point, color_value, pos) and \
+           self.is_suicide_neighbour(down_point, color_value, pos) and \
+           self.is_suicide_neighbour(left_point, color_value, pos) and \
+           self.is_suicide_neighbour(right_point, color_value, pos):
+          result = True
 
-    def fold_go_strings(self, target, source, join_position):
-        ''' Merge two go strings by joining their common moves'''
-        if target == source:
-            return
-        for stone_position in source.stones.stones:
-            self.go_strings[stone_position] = target
-            target.insert_stone(stone_position)
-        target.copy_liberties_from(source)
-        target.remove_liberty(join_position)
+    return result
 
-    def add_adjacent_liberty(self, pos, go_string):
-        '''
-        Append new liberties to provided GoString for the current move
-        '''
-        row, col = pos
-        if row < 0 or col < 0 or row > self.board_size - 1 or col > self.board_size - 1:
-            return
-        if pos not in self.board:
-            go_string.insert_liberty(pos)
+  def is_suicide_neighbour(self, cur_point, color_value, pos):
+    result = False
+    if cur_point == None:
+      result = True
+    else:
+      if cur_point.get_color() == color_value:
+        cur_group_reporter = self.group_reporters.get(cur_point.get_group_id())
+        if cur_group_reporter.is_the_only_empty(pos):
+          result = True
+      else:
+        result = True
+    return result
 
-    def is_move_on_board(self, move):
-        return move in self.board
+  def can_kill_neighbour(self, cur_point, color_value, pos):
+    result = False
+    if cur_point == None:
+      result = False
+    else:
+      enemy_color_value = self.reverse_color_value(color_value)
+      if cur_point.get_color() == enemy_color_value:
+        cur_group_reporter = self.group_reporters.get(cur_point.get_group_id())
+        if cur_group_reporter.is_the_only_empty(pos):
+          result = True
+      else:
+        result = False
+    return result
 
-    def is_move_suicide(self, color, pos):
-        '''Check if a proposed move would be suicide.'''
-        # Make a copy of ourself to apply the move.
-        temp_board = copy.deepcopy(self)
-        temp_board.apply_move(color, pos)
-        new_string = temp_board.go_strings[pos]
-        return new_string.get_num_liberties() == 0
+  def is_ko_by_letter(self, color, pos):
+    color_value = self.get_color_value(color)
+    return self.is_ko(color_value, pos)
 
-    def is_move_legal(self, color, pos):
-        '''Check if a proposed moved is legal.'''
-        return (not self.is_move_on_board(pos)) and \
-            (not self.is_move_suicide(color, pos)) and \
-            (not self.is_simple_ko(color, pos))
+  def is_ko(self, color_value, pos):
+    result = False
+    if len(self.last_remove) == 1:
+      # just one stone was removed in last move, it may be a ko
+      if pos in self.last_remove:
+        # current position is the only one in last remove, it may be a ko
+        (last_move_pos, last_move_color) = self.last_move
+        last_move_point = self.all_points.get(last_move_pos)
+        group_reporter = self.group_reporters.get(last_move_point.get_group_id())
+        enemy_color_value = self.reverse_color_value(color_value)
+        if group_reporter.get_stack_len(enemy_color_value) == 1:
+          if group_reporter.is_the_only_empty(pos):
+            # last move has only one stone in group, and only one empty left, which is current position
+            # it is a ko
+            result = True
+    return result
 
-    def is_my_eye(self, color, pos):
-      if color == 'b':
-        if self.is_true_eye[pos] == 1:
-          return True
-      elif color == 'w':
-        if self.is_true_eye[pos] == 2:
-          return True
+  def is_move_legal(self, color, pos):
+    color_value = self.get_color_value(color)
+
+    # return false if current position is not empty
+    cur_point = self.all_points.get(pos)
+    if cur_point.get_color() != 0:
       return False
 
-    def create_go_string(self, color, pos):
-        ''' Create GoString from current Board and move '''
-        go_string = GoString(self.board_size, color)
-        go_string.insert_stone(pos)
-        self.go_strings[pos] = go_string
-        self.board[pos] = color
+    # return false if current position is a suicide move
+    if self.is_suicide(color_value, pos):
+      return False
 
-        row, col = pos
-        for adjpos in [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]:
-            self.add_adjacent_liberty(adjpos, go_string)
-        return go_string
+    # return false if current position is a ko
+    if self.is_ko(color_value, pos):
+      return False
 
-    def other_color(self, color):
-        '''
-        Color of other player
-        '''
-        if color == 'b':
-            return 'w'
-        if color == 'w':
-            return 'b'
-
-    def is_simple_ko(self, play_color, pos):
-        '''
-        Determine ko from board position and player.
-
-        Parameters:
-        -----------
-        play_color: Color of the player to make the next move.
-        pos: Current move as (row, col)
-        '''
-        enemy_color = self.other_color(play_color)
-        row, col = pos
-        if self.ko_last_move_num_captured == 1:
-            last_move_row, last_move_col = self.ko_last_move
-            manhattan_distance_last_move = abs(last_move_row - row) + abs(last_move_col - col)
-            if manhattan_distance_last_move == 1:
-                last_go_string = self.go_strings.get((last_move_row, last_move_col))
-                if last_go_string is not None and last_go_string.get_num_liberties() == 1:
-                    if last_go_string.get_num_stones() == 1:
-                        num_adjacent_enemy_liberties = 0
-                        for adjpos in [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]:
-                            if (self.board.get(adjpos) == enemy_color and
-                               self.go_strings[adjpos].get_num_liberties() == 1):
-                                num_adjacent_enemy_liberties = num_adjacent_enemy_liberties + 1
-                        if num_adjacent_enemy_liberties == 1:
-                            return True
-        return False
-
-    def check_enemy_liberty(self, play_color, enemy_pos, our_pos):
-        '''
-        Update surrounding liberties on board after a move has been played.
-
-        Parameters:
-        -----------
-        play_color: Color of player about to move
-        enemy_pos: latest enemy move
-        our_pos: our latest move
-        '''
-        enemy_row, enemy_col = enemy_pos
-        our_row, our_col = our_pos
-
-        # Sanity checks
-        if enemy_row < 0 or enemy_row >= self.board_size or enemy_col < 0 or enemy_col >= self.board_size:
-            return
-        enemy_color = self.other_color(play_color)
-        if self.board.get(enemy_pos) != enemy_color:
-            return
-        enemy_string = self.go_strings[enemy_pos]
-        if enemy_string is None:
-            raise ValueError('Inconsistency between board and go_strings at %r' % enemy_pos)
-
-        # Update adjacent liberties on board
-        enemy_string.remove_liberty(our_pos)
-        if enemy_string.get_num_liberties() == 0:
-            for enemy_pos in enemy_string.stones.stones:
-                string_row, string_col = enemy_pos
-                del self.board[enemy_pos]
-                del self.go_strings[enemy_pos]
-                self.ko_last_move_num_captured = self.ko_last_move_num_captured + 1
-                for adjstring in [(string_row - 1, string_col), (string_row + 1, string_col),
-                                  (string_row, string_col - 1), (string_row, string_col + 1)]:
-                    self.add_liberty_to_adjacent_string(adjstring, enemy_pos, play_color)
-
-    def apply_move(self, play_color, pos):
-        '''
-        Execute move for given color, i.e. play current stone on this board
-        Parameters:
-        -----------
-        play_color: Color of player about to move
-        pos: Current move as (row, col)
-        '''
-        if pos in self.board:
-            raise ValueError('Move ' + str(pos) + 'is already on board.')
-
-        self.ko_last_move_num_captured = 0
-        row, col = pos
-
-        # Remove any enemy stones that no longer have a liberty
-        self.check_enemy_liberty(play_color, (row - 1, col), pos)
-        self.check_enemy_liberty(play_color, (row + 1, col), pos)
-        self.check_enemy_liberty(play_color, (row, col - 1), pos)
-        self.check_enemy_liberty(play_color, (row, col + 1), pos)
-
-        # Create a GoString for our new stone, and merge with any adjacent strings
-        play_string = self.create_go_string(play_color, pos)
-        play_string = self.fold_our_moves(play_string, play_color, (row - 1, col), pos)
-        play_string = self.fold_our_moves(play_string, play_color, (row + 1, col), pos)
-        play_string = self.fold_our_moves(play_string, play_color, (row, col - 1), pos)
-        play_string = self.fold_our_moves(play_string, play_color, (row, col + 1), pos)
-
-        # Store last move for ko
-        self.ko_last_move = pos
-
-        self.update_states()
-
-    def update_states(self):
-
-      max_pos_number = self.board_size - 1
-
-      # update the stone state at first:
-      for row in range(self.board_size):
-        for col in range(self.board_size):
-          cur_color = self.board.get((row, col))
-          if cur_color is not None:
-            # setting stone state base on the stone color of current pos
-            if cur_color == 'b':
-              self.stone_state[(row, col)] = 1
-            elif cur_color == 'w':
-              self.stone_state[(row, col)] = 2
-            else:
-              self.stone_state[(row, col)] = 100 # it is an error
-          else:
-            # set stone state of current pos to 0 as there is no stone in current pos
-            self.stone_state[(row, col)] = 0
-
-
-      for row in range(self.board_size):
-        for col in range(self.board_size):
-          
-          if self.stone_state[(row, col)] != 0:
-            # current pos is not empty, it could not be an eye
-            self.is_eye[(row, col)] = 0
-
-          else:
-            # try to compute whether current pos is an eye
-            neighbours = []
-            diagonals = []
-            position_type = 'normal' # should be 'corner' 'edge' 'normal'
-
-            # the following code should be wrapped into a function:
-            # or you can use the feature of set to clean the following code
-            if row == 0:
-              if col == 0:
-                # bottom left corner
-                neighbours.append(self.stone_state[(row+1, col)])
-                neighbours.append(self.stone_state[(row, col+1)])
-                diagonals.append(self.stone_state[(row+1, col+1)])
-                position_type = 'corner'
-              elif col == max_pos_number:
-                # bottom right corner
-                neighbours.append(self.stone_state[(row+1, col)])
-                neighbours.append(self.stone_state[(row, col-1)])
-                diagonals.append(self.stone_state[(row+1, col-1)])
-                position_type = 'corner'
-              else:
-                # bottom edge
-                neighbours.append(self.stone_state[(row+1, col)])
-                neighbours.append(self.stone_state[(row, col+1)])
-                neighbours.append(self.stone_state[(row, col-1)])
-                
-                diagonals.append(self.stone_state[(row+1, col+1)])
-                diagonals.append(self.stone_state[(row+1, col-1)])
-                
-                position_type = 'edge'
-            elif row == max_pos_number:
-              if col == 0:
-                # up left corner
-                neighbours.append(self.stone_state[(row-1, col)])
-                neighbours.append(self.stone_state[(row, col+1)])
-                
-                diagonals.append(self.stone_state[(row-1, col+1)])
-                
-                position_type = 'corner'
-              
-              elif col == max_pos_number:
-                # up right corner
-                neighbours.append(self.stone_state[(row-1, col)])
-                neighbours.append(self.stone_state[(row, col-1)])
-                
-                diagonals.append(self.stone_state[(row-1, col-1)])
-                
-                position_type = 'corner'
-              else:
-                # up edge
-                neighbours.append(self.stone_state[(row-1, col)])
-                neighbours.append(self.stone_state[(row, col+1)])
-                neighbours.append(self.stone_state[(row, col-1)])
-                
-                diagonals.append(self.stone_state[(row-1, col+1)])
-                diagonals.append(self.stone_state[(row-1, col-1)])
-                
-                position_type = 'edge'
-            else:
-              if col == 0:
-                # left edge
-                neighbours.append(self.stone_state[(row-1, col)])
-                neighbours.append(self.stone_state[(row+1, col)])
-                neighbours.append(self.stone_state[(row, col+1)])
-                
-                diagonals.append(self.stone_state[(row+1, col+1)])
-                diagonals.append(self.stone_state[(row-1, col+1)])
-                
-                position_type = 'edge'
-              elif col == max_pos_number:
-                # right edge
-                neighbours.append(self.stone_state[(row-1, col)])
-                neighbours.append(self.stone_state[(row+1, col)])
-                neighbours.append(self.stone_state[(row, col-1)])
-                
-                diagonals.append(self.stone_state[(row+1, col-1)])
-                diagonals.append(self.stone_state[(row-1, col-1)])
-                position_type = 'edge'
-              else:
-                # middle
-                neighbours.append(self.stone_state[(row-1, col)])
-                neighbours.append(self.stone_state[(row+1, col)])
-                neighbours.append(self.stone_state[(row, col+1)])
-                neighbours.append(self.stone_state[(row, col-1)])
-                
-                
-                diagonals.append(self.stone_state[(row+1, col+1)])
-                diagonals.append(self.stone_state[(row-1, col+1)])
-                diagonals.append(self.stone_state[(row+1, col-1)])
-                diagonals.append(self.stone_state[(row-1, col-1)])
-
-                position_type = 'normal'
-
-            neighbour_color = 0
-            get_color_before = False
-            
-            has_empty = False
-            different_color = False
-
-            for neighbour in neighbours:
-              if neighbour == 0:
-                has_empty = True
-                break
-              
-              if get_color_before:
-                if neighbour_color != neighbour:
-                  different_color = True
-                  break
-              else:
-                neighbour_color = neighbour
-                get_color_before = True
-            
-            if has_empty or different_color:
-              self.is_eye[(row, col)] = 0
-            else:
-              # current pos is surrounded by same color, trying to caculate the diagnoal
-              bad_diagnoal_number = 0
-              empty_bad_diagnoal_number = 0
-              for diagonal in diagonals:
-                if diagonal != neighbour_color:
-                  bad_diagnoal_number = bad_diagnoal_number + 1
-                if diagonal == 0:
-                  empty_bad_diagnoal_number = empty_bad_diagnoal_number + 1
-
-              if position_type == 'corner':
-                if bad_diagnoal_number == 0:
-                  self.is_eye[(row, col)] = neighbour_color
-                else:
-                  if empty_bad_diagnoal_number == 0:
-                    self.is_eye[(row, col)] = 0
-                  else:
-                    # need to check whether there is adjacent eye to protect it
-                    self.is_eye[(row, col)] = neighbour_color + 10
-              elif position_type == 'edge':
-                if bad_diagnoal_number == 0:
-                  self.is_eye[(row, col)] = neighbour_color
-                elif bad_diagnoal_number == 2:
-                  self.is_eye[(row, col)] = 0
-                else:
-                  if empty_bad_diagnoal_number == 0:
-                    self.is_eye[(row, col)] = 0
-                  else:
-                    # need to check whether there is adjacent eye to protect it
-                    self.is_eye[(row, col)] = neighbour_color + 10
-              else:
-                if bad_diagnoal_number < 2:
-                  self.is_eye[(row, col)] = neighbour_color
-                elif bad_diagnoal_number > 2:
-                  self.is_eye[(row, col)] = 0
-                else:
-                
-                  # need to check whether there is adjacent eye to protect it
-                  self.is_eye[(row, col)] = neighbour_color + 10
-                
-      for row in range(self.board_size):
-        for col in range(self.board_size):
-          if self.is_eye[(row, col)] == 11:
-            diagonals = []
-            diagonals.append(self.is_eye.get((row-1, col-1)))
-            diagonals.append(self.is_eye.get((row-1, col+1)))
-            diagonals.append(self.is_eye.get((row+1, col-1)))
-            diagonals.append(self.is_eye.get((row+1, col+1)))
-
-            is_true_eye = False
-            for diagonal in diagonals:
-              if diagonal is not None:
-                if diagonal == 11:
-                  is_true_eye = True
-
-            if is_true_eye:
-              self.is_true_eye[(row, col)] = 1
-            else:
-              self.is_true_eye[(row, col)] = 0
-          
-          elif self.is_eye[(row, col)] == 12:
-            # print('found 12')
-            diagonals = []
-            diagonals.append(self.is_eye.get((row-1, col-1)))
-            diagonals.append(self.is_eye.get((row-1, col+1)))
-            diagonals.append(self.is_eye.get((row+1, col-1)))
-            diagonals.append(self.is_eye.get((row+1, col+1)))
-
-            is_true_eye = False
-            for diagonal in diagonals:
-              if diagonal is not None:
-                # print ('d:'+str(diagonal))
-                if diagonal == 12:
-                  is_true_eye = True
-
-            if is_true_eye:
-              self.is_true_eye[(row, col)] = 2
-            else:
-              self.is_true_eye[(row, col)] = 0
-          
-          else:
-            self.is_true_eye[(row, col)] = self.is_eye.get((row, col))        
-            
-
-
-    def add_liberty_to_adjacent_string(self, string_pos, liberty_pos, color):
-        ''' Insert liberty into corresponding GoString '''
-        if self.board.get(string_pos) != color:
-            return
-        go_string = self.go_strings[string_pos]
-        go_string.insert_liberty(liberty_pos)
-
-    def fold_our_moves(self, first_string, color, pos, join_position):
-        ''' Fold current board situation with a new move played by us'''
-        row, col = pos
-        if row < 0 or row >= self.board_size or col < 0 or col >= self.board_size:
-            return first_string
-        if self.board.get(pos) != color:
-            return first_string
-        string_to_fold = self.go_strings[pos]
-        self.fold_go_strings(string_to_fold, first_string, join_position)
-        return string_to_fold
+    return True
+  
+  def is_my_eye(self, color, pos):
+    # @todo build the eye checking system 
+    return False
     
-    def get_state(self, cur_color):
-        board_state = np.zeros( (self.board_size,self.board_size))
-        
-        for i in range(self.board_size - 1, -1, -1):
-            
-            for j in range(0, self.board_size):
-                thispiece = self.board.get((i, j))
-                # if thispiece is None:
-                #     board_state[i][j] = 0
-                if thispiece == 'b':
-                    if cur_color == 'b':
-                        board_state[i][j] = 1
-                    else:
-                        board_state[i][j] = 2
-                if thispiece == 'w':
-                    if cur_color == 'b':
-                        board_state[i][j] = 2
-                    else:
-                        board_state[i][j] = 1
-                   
-            
-        return board_state
+  def get_group_id_index(self):
+    self.group_id_index = self.group_id_index + 1
+    return self.group_id_index
 
-    def __str__(self):
-        result = 'GoBoard\n'
-        for i in range(self.board_size - 1, -1, -1):
-            line = ''
-            for j in range(0, self.board_size):
-                thispiece = self.board.get((i, j))
-                if thispiece is None:
-                    line = line + '.'
-                if thispiece == 'b':
-                    line = line + '*'
-                if thispiece == 'w':
-                    line = line + 'O'
-            result = result + line + '\n'
-        return result
+  def connect_all_points(self):
+    for row in range(self.board_size):
+      for col in range(self.board_size):
+        cur_point = self.all_points.get((row,col))
+        up_point = self.all_points.get((row+1, col))
+        down_point = self.all_points.get((row-1, col))
+        left_point = self.all_points.get((row, col-1))
+        right_point = self.all_points.get((row, col+1))
+        cur_point.set_up(up_point)
+        cur_point.set_down(down_point)
+        cur_point.set_left(left_point)
+        cur_point.set_right(right_point)
+
+  def get_color_value(self, color):
+    if color == 'b':
+      color_value = 1
+    elif color == 'w':
+      color_value = 2
+    else:
+      raise ValueError
+
+    return color_value
+
+  def get_enemy_color_value(self, color):
+    if color == 'b':
+      color_value = 2
+    elif color == 'w':
+      color_value = 1
+    else:
+      raise ValueError
+
+    return color_value
+
+  def other_color(self, color):
+    '''
+    Color of other player
+    '''
+    if color == 'b':
+        return 'w'
+    if color == 'w':
+        return 'b'
+
+  def reverse_color_value(self, color_value):
+    if color_value == 0:
+      return 0
+    elif color_value == 1:
+      return 2
+    elif color_value == 2:
+      return 1
+    else:
+      raise ValueError
+
+  def get_score(self):
+    valid_group_ids = set()
+
+    for i in range(self.board_size):
+      for j in range(self.board_size):
+        point = self.all_points.get((i,j))
+        cur_group_id = point.get_group_id()
+        valid_group_ids.add(cur_group_id)
+
+    total_empty = 0
+    total_black = 0
+    total_white = 0
+
+    # print ('# group reporter len: ' + str(self.group_reporters))
+    for reporter_id in valid_group_ids:
+      
+      reporter = self.group_reporters.get(reporter_id)
+      # print ('# group id: ' + str(reporter_id) + ' group type: ' + str(reporter.get_group_type())),
+
+      (empty_number, black_number, white_number) = reporter.get_score()
+      total_empty = total_empty + empty_number
+      total_black = total_black + black_number
+      total_white = total_white + white_number
+
+      # print ('empty:' + str(empty_number) + '  black:' + str(black_number) + '  white:' + str(white_number))
+
+    total_socre = total_empty + total_black + total_white
+    board_score = self.board_size * self.board_size
+
+    if total_socre != board_score:
+      print ('# warning: inconsiste status: total/board: ' + str(total_socre) + '/' + str(board_score))
+
+    return (total_empty, total_black, total_white)
+
+  def get(self, pos):
+    # for back compatibility
+    # return the color letter 'b' or 'w' for current position
+
+    cur_point = self.all_points.get(pos)
+    if cur_point.get_color() == 1:
+      return 'b'
+    elif cur_point.get_color() == 2:
+      return 'w'
+    else:
+      return 'e' # 'e' stand for empty
+
+  def get_liberties(self, pos):
+    # for back compatibility
+    # return the number of liberties of current position
+
+    cur_point = self.all_points.get(pos)
+    cur_group_reporter = self.group_reporters.get(cur_point.get_group_id())
+    return cur_group_reporter.get_empty_number()
+
+  def analyst_result(self):
+    valid_group_ids = set()
+
+    for i in range(self.board_size):
+      for j in range(self.board_size):
+        point = self.all_points.get((i,j))
+        cur_group_id = point.get_group_id()
+        valid_group_ids.add(cur_group_id)
+
+    total_empty = 0
+    total_black = 0
+    total_white = 0
+
+    # print ('# group reporter len: ' + str(self.group_reporters))
+    for reporter_id in valid_group_ids:
+      
+      reporter = self.group_reporters.get(reporter_id)
+      # print ('# group id: ' + str(reporter_id) + ' group type: ' + str(reporter.get_group_type())),
+
+      (empty_number, black_number, white_number) = reporter.get_score()
+      if empty_number > 0:
+        print('reporter type:' + str(reporter.get_group_type()))
+        print('empty:' + str(empty_number))
+        print('black:' + str(black_number))
+        print('white:' + str(white_number))
+        empty_stack = reporter.get_stack(0)
+        print('first in empty stack:' + str(empty_stack))
+
     
-    def get_eye_state(self):
-        result = 'eye_state\n'
-        for i in range(self.board_size - 1, -1, -1):
-            line = ''
-            for j in range(0, self.board_size):
-                thispiece = self.is_eye.get((i, j))
-                if thispiece is None:
-                    line = line + '.'
-                if thispiece == 0:
-                    line = line + '.'
-                if thispiece == 1:
-                    line = line + '*'
-                if thispiece == 2:
-                    line = line + 'O'
-                if thispiece == 11:
-                    line = line + '&'
-                if thispiece == 12:
-                    line = line + '@'
-                    
-            result = result + line + '\n'
-        return result
-    
-    def get_true_eye_state(self):
-        result = 'true_eye_state\n'
-        for i in range(self.board_size - 1, -1, -1):
-            line = ''
-            for j in range(0, self.board_size):
-                thispiece = self.is_true_eye.get((i, j))
-                if thispiece is None:
-                    line = line + '.'
-                if thispiece == 0:
-                    line = line + '.'
-                if thispiece == 1:
-                    line = line + '*'
-                if thispiece == 2:
-                    line = line + 'O'
+
+  def __str__(self):
+    result = '# GoPoints\n'
+    display_letter = '.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
+    display_letter_number = len(display_letter)
+    display_letter_index = 0
+    group_mapping = {}
+
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+            this_point = self.all_points.get((i, j))
+            if this_point is None:
+              line = line + '.'
+            else:
+              if this_point.get_color() == 1:
+                line = line + '*'
+              if this_point.get_color() == 2:
+                line = line + 'O'
+              if this_point.get_color() == 0:
+                group_id = this_point.get_group_id()
+                group_index = group_mapping.get(group_id)
+                if group_index is None:
+                  # print('found new group id: ' + str(group_id))
+                  group_index = display_letter_index
+                  display_letter_index = display_letter_index + 1
+                  group_mapping[group_id] = group_index
+                cur_letter = display_letter[group_index%display_letter_number]
+                line = line + cur_letter
                 
-                    
-            result = result + line + '\n'
-        return result
+
+        result = result + line + '\n'
+    
+    (empty_score, black_score, white_score) = self.get_score()
+    
+    result = result + '# Black:' + str(black_score) + ' White:' + str(white_score) + ' Empty:' + str(empty_score) +'\n'
+
+    return result
 
 
-class BoardSequence(object):
-    '''
-    Store a sequence of locations on a board, which could either represent stones or liberties.
-    '''
-    def __init__(self, board_size=19):
-        self.board_size = board_size
-        self.stones = []
-        self.board = {}
+class Point(object):
 
-    def insert(self, combo):
-        row, col = combo
-        if combo in self.board:
-            return
-        self.stones.append(combo)
-        self.board[combo] = len(self.stones) - 1
+  def __init__(self, color, pos):
+    self.color = color # 0: empty, 1:black, 2:white
+    self.pos = pos
+    self.left = None
+    self.right = None
+    self.up = None
+    self.down = None
+    self.group_id = -1
+  
+  def get_color(self):
+    return self.color
 
-    def erase(self, combo):
-        if combo not in self.board:
-            return
-        iid = self.board[combo]
-        if iid == len(self.stones) - 1:
-            del self.stones[iid]
-            del self.board[combo]
-            return
-        self.stones[iid] = self.stones[len(self.stones) - 1]
-        del self.stones[len(self.stones) - 1]
-        movedcombo = self.stones[iid]
-        self.board[movedcombo] = iid
-        del self.board[combo]
+  def get_pos(self):
+    return self.pos
 
-    def exists(self, combo):
-        return combo in self.board
+  def set_group_id(self, id):
+    self.group_id = id
 
-    def size(self):
-        return len(self.stones)
+  def set_color(self, color):
+    self.color = color
+  
+  def get_color(self):
+    return self.color
 
-    def __getitem__(self, iid):
-        return self.stones[iid]
+  def get_group_id(self):
+    return self.group_id
 
-    def __str__(self):
-        result = 'BoardSequence\n'
-        for row in range(self.board_size - 1, -1, -1):
-            thisline = ""
-            for col in range(0, self.board_size):
-                if self.exists((row, col)):
-                    thisline = thisline + "*"
-                else:
-                    thisline = thisline + "."
-            result = result + thisline + "\n"
-        return result
+  def set_left(self, left_point):
+    self.left = left_point
+  
+  def get_left(self):
+    return self.left
+
+  def set_right(self, right_point):
+    self.right = right_point
+  
+  def get_right(self):
+    return self.right
+
+  def set_up(self, up_point):
+    self.up = up_point
+  
+  def get_up(self):
+    return self.up
+
+  def set_down(self, down_point):
+    self.down = down_point
+  
+  def get_down(self):
+    return self.down
+
+ 
+  
+class Reporter(object):
+
+  def __init__(self, group_id, group_type):
+    
+    self.empty_stack = set()
+    self.black_stack = set()
+    self.white_stack = set()
+    self.group_id = group_id
+    self.group_type = group_type # group type: 0 empty group; 1 black group; 2 white group 
+
+  def get_group_id(self):
+    return self.group_id
+
+  def get_group_type(self):
+    return self.group_type
+
+  def get_score(self):
+    empty_number = self.get_empty_number()
+    black_number = self.get_black_number()
+    white_number = self.get_white_number()
+
+    if self.group_type == 1:
+      # black group
+      return (0, black_number, 0)
+    elif self.group_type == 2:
+      # white group
+      return (0, 0, white_number)
+    else:
+      # empty group
+      if black_number > 0 and white_number > 0:
+        # this empty group doesn't belong to any color
+        return (empty_number, 0, 0)
+      elif black_number == 0 and white_number == 0:
+        # init state, no black stone, no white stone either
+        return (empty_number, 0, 0)
+      elif black_number == 1 and white_number == 0:
+        # first step, only one stone in the pane
+        return (empty_number, 0, 0)
+      else:
+        if black_number > 0 and white_number == 0:
+          # this empty group belong to black
+          return (0, empty_number, 0)
+        elif white_number > 0 and black_number == 0:
+          # this empty group belong to white
+          return (0, 0, empty_number)
+        else:
+          # this function will end up here is there is anything inconsistent
+          # return (0, 0, 0) for this group so that we can detect the inconsistent status out side
+          return (0, 0, 0)
+
+  def add_empty(self, pos):
+    self.empty_stack.add(pos)
+
+  def remove_empty(self, color_value, pos):
+    if pos in self.empty_stack:
+      self.empty_stack.remove(pos)
+
+    if color_value == 1:
+      self.black_stack.add(pos)
+    elif color_value == 2:
+      self.white_stack.add(pos)
+
+  def remove_color(self, color_value, pos):
+    if color_value == 1:
+      if pos in self.black_stack:
+        self.black_stack.remove(pos)
+    
+    if color_value == 2:
+      if pos in self.white_stack:
+        self.white_stack.remove(pos)
+
+    self.empty_stack.add(pos)
 
 
-class GoString(object):
-    '''
-    Represents a string of contiguous stones of one color on the board, including a list of all its liberties.
-    '''
-    def __init__(self, board_size, color):
-        self.board_size = board_size
-        self.color = color
-        self.liberties = BoardSequence(board_size)
-        self.stones = BoardSequence(board_size)
+  def add_point(self, color_value, pos):
+    if color_value == 1:
+      self.black_stack.add(pos)
+    elif color_value == 2:
+      self.white_stack.add(pos)
 
-    def get_stone(self, index):
-        return self.stones[index]
+  def add_black(self, pos):
+    self.black_stack.add(pos)
 
-    def get_liberty(self, index):
-        return self.liberties[index]
+  def add_white(self, pos):
+    self.white_stack.add(pos)
 
-    def insert_stone(self, combo):
-        self.stones.insert(combo)
+  def empty_stack(self):
+    return self.empty_stack
 
-    def get_num_stones(self):
-        return self.stones.size()
+  def black_stack(self):
+    return self.black_stack
 
-    def remove_liberty(self, combo):
-        self.liberties.erase(combo)
+  def white_stack(self):
+    return self.white_stack
 
-    def get_num_liberties(self):
-        return self.liberties.size()
+  def get_stack(self, color_value):
+    if color_value == 0:
+      return self.empty_stack
+    elif color_value == 1:
+      return self.black_stack
+    elif color_value == 2:
+      return self.white_stack
 
-    def insert_liberty(self, combo):
-        self.liberties.insert(combo)
+  def get_stack_len(self, color_value):
+    if color_value == 0:
+      return len(self.empty_stack)
+    elif color_value == 1:
+      return len(self.black_stack)
+    elif color_value == 2:
+      return len(self.white_stack)
 
-    def copy_liberties_from(self, source):
-        for libertyPos in source.liberties.stones:
-            self.liberties.insert(libertyPos)
+  def get_empty_number(self):
+    return len(self.empty_stack)
 
-    def __str__(self):
-        result = "go_string[ stones=" + str(self.stones) + " liberties=" + str(self.liberties) + " ]"
-        return result
+  def get_black_number(self):
+    return len(self.black_stack)
 
+  def get_white_number(self):
+    return len(self.white_stack)
 
-def from_string(board_string):
-    """Build a board from an ascii-art representation.
+  def is_the_only_empty(self, cur_pos):
+    # return true, if cur_pos is the only empty point in current empty stack
+    result = False
+    if self.get_empty_number() == 1:
+      if cur_pos in self.empty_stack:
+        result = True
+    return result
 
-    'b' for black stones
-    'w' for white stones
-    '.' for empty
+  def print_debug_info(self):
+    print ('# group_id:' + str(self.group_id)),
+    print (' group_type:' + str(self.group_type)),
+    print (' Empty:' + str(self.get_empty_number())),
+    print (' Black:' + str(self.get_black_number())),
+    print (' White:' + str(self.get_white_number()))
+    
+  
 
-    The bottom row is row 0, and the top row is row boardsize - 1. This
-    matches the normal way you'd use board coordinates, with A1 in the
-    bottom-left.
-
-    Rows are separated by newlines. Extra whitespace is ignored.
-    """
-    rows = [line.strip() for line in board_string.strip().split("\n")]
-    boardsize = len(rows)
-    if any(len(row) != boardsize for row in rows):
-        raise ValueError('Board must be square')
-
-    board = GoBoard(boardsize)
-    rows.reverse()
-    for r, row_string in enumerate(rows):
-        for c, point in enumerate(row_string):
-            if point in ('b', 'w'):
-                board.apply_move(point, (r, c))
-    return board
-
-
-def to_string(board):
-    """Make an ascii-art representation of a board."""
-    rows = []
-    for r in range(board.board_size):
-        row = ''
-        for c in range(board.board_size):
-            row += board.board.get((r, c), '.')
-        rows.append(row)
-    rows.reverse()
-    return '\n'.join(rows)

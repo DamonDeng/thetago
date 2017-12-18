@@ -131,24 +131,27 @@ class OriginalProcessor(object):
         enemy_color = go_board.other_color(color)
         label = row * 19 + col
         move_array = np.zeros((num_planes, go_board.board_size, go_board.board_size))
+
         for row in range(0, go_board.board_size):
             for col in range(0, go_board.board_size):
                 pos = (row, col)
-                if go_board.board.get(pos) == color:
-                    if go_board.go_strings[pos].liberties.size() == 1:
+                if go_board.get(pos) == color:
+                    liberties_size = go_board.get_liberties(pos)
+                    if liberties_size == 1:
                         move_array[0, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() == 2:
+                    elif liberties_size == 2:
                         move_array[1, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() >= 3:
+                    elif liberties_size >= 3:
                         move_array[2, row, col] = 1
-                if go_board.board.get(pos) == enemy_color:
-                    if go_board.go_strings[pos].liberties.size() == 1:
+                if go_board.get(pos) == enemy_color:
+                    liberties_size = go_board.get_liberties(pos)
+                    if liberties_size == 1:
                         move_array[3, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() == 2:
+                    elif liberties_size == 2:
                         move_array[4, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() >= 3:
+                    elif liberties_size >= 3:
                         move_array[5, row, col] = 1
-                if go_board.is_simple_ko(color, pos):
+                if go_board.is_ko_by_letter(color, pos):
                     move_array[6, row, col] = 1
         return move_array, label
 

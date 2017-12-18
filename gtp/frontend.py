@@ -30,11 +30,6 @@ class GTPFrontend(object):
         self._output = sys.stdout
         self._stopped = False
 
-        # self.bot.apply_move('b', (3,3))
-        # result = self.bot.select_move('w')
-
-        # print(result)
-
     def run(self):
         while not self._stopped:
             ln = self._input.readline().strip()
@@ -64,7 +59,7 @@ class GTPFrontend(object):
         return response.success()
 
     def handle_clear_board(self):
-        self.bot.set_board(GoBoard())
+        self.bot.reset_board()
         return response.success()
 
     def handle_known_command(self, command_name):
