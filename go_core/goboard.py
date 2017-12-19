@@ -1,6 +1,9 @@
 import numpy as np
 import copy
 
+from go_core.group import Group
+from go_core.point import Point
+
 class GoBoard(object):
 
   def __init__(self, board_size=19):
@@ -24,7 +27,7 @@ class GoBoard(object):
     
     self.board_size = board_size
 
-    self.group_reporters = {}
+    self.group_records = {}
 
     self.group_id_index = 0 # the first group id is 0, which is used in comming initing code.
 
@@ -40,10 +43,10 @@ class GoBoard(object):
     empty_color = 0
     working_group_id = 0
     point = self.all_points.get((0,0))
-    reporter = Reporter(working_group_id, empty_color)
-    reporter = self.update_group(point, empty_color, working_group_id, reporter)
-    # print ('# update finished, reporter empty number: ' + str(reporter.get_empty_number()))
-    self.group_reporters[working_group_id] = reporter
+    group_record = Group(working_group_id, empty_color)
+    group_record = self.update_group(point, empty_color, working_group_id, group_record)
+    # print ('# update finished, group_record empty number: ' + str(group_record.get_empty_number()))
+    self.group_records[working_group_id] = group_record
 
     self.last_move = None # last move format: (pos, color_value)
     self.last_remove = set() # init the last remove stones , it is a set.
@@ -91,20 +94,20 @@ class GoBoard(object):
     point_group_id = self.get_group_id_index()
     # cur_point.set_group_id(point_group_id)
     # update the point around if they have the same color with current point
-    reporter = Reporter(point_group_id, cur_color_value)
+    group_record = Group(point_group_id, cur_color_value)
     # add current point into the new group at first
-    # reporter.add_point(cur_color_value, pos)
+    # group_record.add_point(cur_color_value, pos)
 
     # try to merge the friend point around
-    # reporter = self.handle_friend_point(up_point, cur_color_value, point_group_id, reporter)
-    # reporter = self.handle_friend_point(down_point, cur_color_value, point_group_id, reporter)
-    # reporter = self.handle_friend_point(left_point, cur_color_value, point_group_id, reporter)
-    # reporter = self.handle_friend_point(right_point, cur_color_value, point_group_id, reporter)
-    # save the reporter of current point
+    # group_record = self.handle_friend_point(up_point, cur_color_value, point_group_id, group_record)
+    # group_record = self.handle_friend_point(down_point, cur_color_value, point_group_id, group_record)
+    # group_record = self.handle_friend_point(left_point, cur_color_value, point_group_id, group_record)
+    # group_record = self.handle_friend_point(right_point, cur_color_value, point_group_id, group_record)
+    # save the group_record of current point
 
-    reporter = self.update_group(cur_point, cur_color_value, point_group_id, reporter)
-    self.group_reporters[point_group_id] = reporter
-    # reporter.print_debug_info()
+    group_record = self.update_group(cur_point, cur_color_value, point_group_id, group_record)
+    self.group_records[point_group_id] = group_record
+    # group_record.print_debug_info()
     
     # remove the enemy aound if they have only one empty point
     # and current point is the only empty point they have
@@ -129,23 +132,23 @@ class GoBoard(object):
     working_group_id_set = self.handle_space_point(left_point, working_group_id_set)
     working_group_id_set = self.handle_space_point(right_point, working_group_id_set) 
 
-  def handle_friend_point(self, point, cur_color_value, point_group_id, reporter):
+  def handle_friend_point(self, point, cur_color_value, point_group_id, group_record):
     if point != None and point.get_color() == cur_color_value:  
-        reporter = self.update_group(point, cur_color_value, point_group_id, reporter)
-    return reporter
+        group_record = self.update_group(point, cur_color_value, point_group_id, group_record)
+    return group_record
 
   def handle_enemy_point(self, point, enemy_color_value, cur_color_value, cur_pos):
     # remove the enemy aound if they have only one empty point
     # and current point is the only empty point they have
     # decrese empty point number if it is not the only empty point they have
     if point != None and point.get_color() == enemy_color_value:  
-      enemy_group_reporter = self.group_reporters.get(point.get_group_id())
-      if enemy_group_reporter != None: 
-        # enemy_group_reporter.print_debug_info()
-        # print('# empty point of:' + str(point.get_pos()) + " is :" + str(enemy_group_reporter.get_empty_number()))
-        if enemy_group_reporter.is_the_only_empty(cur_pos): #get_empty_number() == 1:
+      enemy_group_record = self.group_records.get(point.get_group_id())
+      if enemy_group_record != None: 
+        # enemy_group_record.print_debug_info()
+        # print('# empty point of:' + str(point.get_pos()) + " is :" + str(enemy_group_record.get_empty_number()))
+        if enemy_group_record.is_the_only_empty(cur_pos): #get_empty_number() == 1:
           # if the empty point removed is the only empty point enemy group has, start to remove the group
-          working_stack = copy.deepcopy(enemy_group_reporter.get_stack(enemy_color_value))
+          working_stack = copy.deepcopy(enemy_group_record.get_stack(enemy_color_value))
           # print('# trying to remove: ' + str(working_stack))
           for target_pos in working_stack:
             # get target point base on target pos
@@ -158,7 +161,7 @@ class GoBoard(object):
             target_point.set_group_id(-1)
             self.update_removed_empty_point(enemy_color_value, target_point)
         else:
-          enemy_group_reporter.remove_empty(cur_color_value, cur_pos)
+          enemy_group_record.remove_empty(cur_color_value, cur_pos)
 
   def update_removed_empty_point(self, removed_color, target_point):
     # current point was removed from board
@@ -170,26 +173,26 @@ class GoBoard(object):
 
     if up_point != None:
       if up_point.get_group_id() != -1: # not the empty one in the point just removed
-        reporter = self.group_reporters.get(up_point.get_group_id())
-        reporter.remove_color(removed_color, target_point.get_pos())
+        group_record = self.group_records.get(up_point.get_group_id())
+        group_record.remove_color(removed_color, target_point.get_pos())
     
     if down_point != None:
       if down_point.get_group_id() != -1: # not the empty one in the point just removed
-        reporter = self.group_reporters.get(down_point.get_group_id())
-        reporter.remove_color(removed_color, target_point.get_pos())
+        group_record = self.group_records.get(down_point.get_group_id())
+        group_record.remove_color(removed_color, target_point.get_pos())
 
     if left_point != None:
       if left_point.get_group_id() != -1: # not the empty one in the point just removed
         # print('left point is being handled:' + str(left_point.get_pos()))
-        reporter = self.group_reporters.get(left_point.get_group_id())
-        # print('before remove: ' + str(reporter.get_empty_number()))
-        reporter.remove_color(removed_color, target_point.get_pos())
-        # print('after remove: ' + str(reporter.get_empty_number()))
+        group_record = self.group_records.get(left_point.get_group_id())
+        # print('before remove: ' + str(group_record.get_empty_number()))
+        group_record.remove_color(removed_color, target_point.get_pos())
+        # print('after remove: ' + str(group_record.get_empty_number()))
 
     if right_point != None:
       if right_point.get_group_id() != -1: # not the empty one in the point just removed
-        reporter = self.group_reporters.get(right_point.get_group_id())
-        reporter.remove_color(removed_color, target_point.get_pos())
+        group_record = self.group_records.get(right_point.get_group_id())
+        group_record.remove_color(removed_color, target_point.get_pos())
 
 
   def handle_space_point(self, point, working_group_id_set):
@@ -200,29 +203,29 @@ class GoBoard(object):
         if not point.get_group_id() in working_group_id_set:
           working_group_id = self.get_group_id_index()
           working_group_id_set.add(working_group_id)
-          reporter = Reporter(working_group_id, empty_color)
-          reporter = self.update_group(point, empty_color, working_group_id, reporter)
-          self.group_reporters[working_group_id] = reporter
+          group_record = Group(working_group_id, empty_color)
+          group_record = self.update_group(point, empty_color, working_group_id, group_record)
+          self.group_records[working_group_id] = group_record
     return working_group_id_set
 
 
-  def update_group(self, cur_point, color_value, group_id, reporter):
+  def update_group(self, cur_point, color_value, group_id, group_record):
     
     if cur_point == None:
       # hit the age of board, return directly
-      return reporter
+      return group_record
 
     # print ('# update:' + str(cur_point.get_pos()) + ' color:' + str(color_value) + ' group_id:' + str(group_id))
-    # add current point into the reporter history base on the value of current color:
+    # add current point into the group_record history base on the value of current color:
     if cur_point.get_color() == 0:
-      # print ('# trying to update reporter with color 0')
-      # print ('# reporter empty number:' + str(reporter.get_empty_number()))
+      # print ('# trying to update group_record with color 0')
+      # print ('# group_record empty number:' + str(group_record.get_empty_number()))
       
-      reporter.add_empty(cur_point.get_pos())
+      group_record.add_empty(cur_point.get_pos())
     elif cur_point.get_color() == 1:
-      reporter.add_black(cur_point.get_pos())
+      group_record.add_black(cur_point.get_pos())
     elif cur_point.get_color() == 2:
-      reporter.add_white(cur_point.get_pos())
+      group_record.add_white(cur_point.get_pos())
 
     # update the points around current point
     if cur_point.get_color() == color_value and cur_point.get_group_id() != group_id:
@@ -233,22 +236,22 @@ class GoBoard(object):
       left_point = cur_point.get_left()
       right_point = cur_point.get_right()
 
-      reporter = self.update_group(up_point, color_value, group_id, reporter)
-      reporter = self.update_group(down_point, color_value, group_id, reporter)
-      reporter = self.update_group(left_point, color_value, group_id, reporter)
-      reporter = self.update_group(right_point, color_value, group_id, reporter)
+      group_record = self.update_group(up_point, color_value, group_id, group_record)
+      group_record = self.update_group(down_point, color_value, group_id, group_record)
+      group_record = self.update_group(left_point, color_value, group_id, group_record)
+      group_record = self.update_group(right_point, color_value, group_id, group_record)
     
-    return reporter
+    return group_record
 
     
   def is_suicide(self, color_value, pos):
     # @todo, implement this method to check whether the move is suicide.
     result = False
     cur_point = self.all_points.get(pos)
-    empty_group_reporter = self.group_reporters.get(cur_point.get_group_id())
+    empty_group_record = self.group_records.get(cur_point.get_group_id())
 
-    if empty_group_reporter.is_the_only_empty(pos):
-      if empty_group_reporter.get_stack_len(color_value) == 0:
+    if empty_group_record.is_the_only_empty(pos):
+      if empty_group_record.get_stack_len(color_value) == 0:
         # no stone has same color with cur color, it may be suicide
         # need to check whether current move can kill one of the neighbour
         up_point = cur_point.get_up()
@@ -284,8 +287,8 @@ class GoBoard(object):
       result = True
     else:
       if cur_point.get_color() == color_value:
-        cur_group_reporter = self.group_reporters.get(cur_point.get_group_id())
-        if cur_group_reporter.is_the_only_empty(pos):
+        cur_group_record = self.group_records.get(cur_point.get_group_id())
+        if cur_group_record.is_the_only_empty(pos):
           result = True
       else:
         result = True
@@ -298,8 +301,8 @@ class GoBoard(object):
     else:
       enemy_color_value = self.reverse_color_value(color_value)
       if cur_point.get_color() == enemy_color_value:
-        cur_group_reporter = self.group_reporters.get(cur_point.get_group_id())
-        if cur_group_reporter.is_the_only_empty(pos):
+        cur_group_record = self.group_records.get(cur_point.get_group_id())
+        if cur_group_record.is_the_only_empty(pos):
           result = True
       else:
         result = False
@@ -317,10 +320,10 @@ class GoBoard(object):
         # current position is the only one in last remove, it may be a ko
         (last_move_pos, last_move_color) = self.last_move
         last_move_point = self.all_points.get(last_move_pos)
-        group_reporter = self.group_reporters.get(last_move_point.get_group_id())
+        group_record = self.group_records.get(last_move_point.get_group_id())
         enemy_color_value = self.reverse_color_value(color_value)
-        if group_reporter.get_stack_len(enemy_color_value) == 1:
-          if group_reporter.is_the_only_empty(pos):
+        if group_record.get_stack_len(enemy_color_value) == 1:
+          if group_record.is_the_only_empty(pos):
             # last move has only one stone in group, and only one empty left, which is current position
             # it is a ko
             result = True
@@ -417,13 +420,13 @@ class GoBoard(object):
     total_black = 0
     total_white = 0
 
-    # print ('# group reporter len: ' + str(self.group_reporters))
-    for reporter_id in valid_group_ids:
+    # print ('# group group_record len: ' + str(self.group_records))
+    for group_record_id in valid_group_ids:
       
-      reporter = self.group_reporters.get(reporter_id)
-      # print ('# group id: ' + str(reporter_id) + ' group type: ' + str(reporter.get_group_type())),
+      group_record = self.group_records.get(group_record_id)
+      # print ('# group id: ' + str(group_record_id) + ' group type: ' + str(group_record.get_group_type())),
 
-      (empty_number, black_number, white_number) = reporter.get_score()
+      (empty_number, black_number, white_number) = group_record.get_score()
       total_empty = total_empty + empty_number
       total_black = total_black + black_number
       total_white = total_white + white_number
@@ -455,8 +458,8 @@ class GoBoard(object):
     # return the number of liberties of current position
 
     cur_point = self.all_points.get(pos)
-    cur_group_reporter = self.group_reporters.get(cur_point.get_group_id())
-    return cur_group_reporter.get_empty_number()
+    cur_group_record = self.group_records.get(cur_point.get_group_id())
+    return cur_group_record.get_empty_number()
 
   def analyst_result(self):
     valid_group_ids = set()
@@ -471,19 +474,19 @@ class GoBoard(object):
     total_black = 0
     total_white = 0
 
-    # print ('# group reporter len: ' + str(self.group_reporters))
-    for reporter_id in valid_group_ids:
+    # print ('# group group_record len: ' + str(self.group_records))
+    for group_record_id in valid_group_ids:
       
-      reporter = self.group_reporters.get(reporter_id)
-      # print ('# group id: ' + str(reporter_id) + ' group type: ' + str(reporter.get_group_type())),
+      group_record = self.group_records.get(group_record_id)
+      # print ('# group id: ' + str(group_record_id) + ' group type: ' + str(group_record.get_group_type())),
 
-      (empty_number, black_number, white_number) = reporter.get_score()
+      (empty_number, black_number, white_number) = group_record.get_score()
       if empty_number > 0:
-        print('reporter type:' + str(reporter.get_group_type()))
+        print('group_record type:' + str(group_record.get_group_type()))
         print('empty:' + str(empty_number))
         print('black:' + str(black_number))
         print('white:' + str(white_number))
-        empty_stack = reporter.get_stack(0)
+        empty_stack = group_record.get_stack(0)
         print('first in empty stack:' + str(empty_stack))
 
     
@@ -527,195 +530,7 @@ class GoBoard(object):
     return result
 
 
-class Point(object):
-
-  def __init__(self, color, pos):
-    self.color = color # 0: empty, 1:black, 2:white
-    self.pos = pos
-    self.left = None
-    self.right = None
-    self.up = None
-    self.down = None
-    self.group_id = -1
-  
-  def get_color(self):
-    return self.color
-
-  def get_pos(self):
-    return self.pos
-
-  def set_group_id(self, id):
-    self.group_id = id
-
-  def set_color(self, color):
-    self.color = color
-  
-  def get_color(self):
-    return self.color
-
-  def get_group_id(self):
-    return self.group_id
-
-  def set_left(self, left_point):
-    self.left = left_point
-  
-  def get_left(self):
-    return self.left
-
-  def set_right(self, right_point):
-    self.right = right_point
-  
-  def get_right(self):
-    return self.right
-
-  def set_up(self, up_point):
-    self.up = up_point
-  
-  def get_up(self):
-    return self.up
-
-  def set_down(self, down_point):
-    self.down = down_point
-  
-  def get_down(self):
-    return self.down
-
- 
-  
-class Reporter(object):
-
-  def __init__(self, group_id, group_type):
-    
-    self.empty_stack = set()
-    self.black_stack = set()
-    self.white_stack = set()
-    self.group_id = group_id
-    self.group_type = group_type # group type: 0 empty group; 1 black group; 2 white group 
-
-  def get_group_id(self):
-    return self.group_id
-
-  def get_group_type(self):
-    return self.group_type
-
-  def get_score(self):
-    empty_number = self.get_empty_number()
-    black_number = self.get_black_number()
-    white_number = self.get_white_number()
-
-    if self.group_type == 1:
-      # black group
-      return (0, black_number, 0)
-    elif self.group_type == 2:
-      # white group
-      return (0, 0, white_number)
-    else:
-      # empty group
-      if black_number > 0 and white_number > 0:
-        # this empty group doesn't belong to any color
-        return (empty_number, 0, 0)
-      elif black_number == 0 and white_number == 0:
-        # init state, no black stone, no white stone either
-        return (empty_number, 0, 0)
-      elif black_number == 1 and white_number == 0:
-        # first step, only one stone in the pane
-        return (empty_number, 0, 0)
-      else:
-        if black_number > 0 and white_number == 0:
-          # this empty group belong to black
-          return (0, empty_number, 0)
-        elif white_number > 0 and black_number == 0:
-          # this empty group belong to white
-          return (0, 0, empty_number)
-        else:
-          # this function will end up here is there is anything inconsistent
-          # return (0, 0, 0) for this group so that we can detect the inconsistent status out side
-          return (0, 0, 0)
-
-  def add_empty(self, pos):
-    self.empty_stack.add(pos)
-
-  def remove_empty(self, color_value, pos):
-    if pos in self.empty_stack:
-      self.empty_stack.remove(pos)
-
-    if color_value == 1:
-      self.black_stack.add(pos)
-    elif color_value == 2:
-      self.white_stack.add(pos)
-
-  def remove_color(self, color_value, pos):
-    if color_value == 1:
-      if pos in self.black_stack:
-        self.black_stack.remove(pos)
-    
-    if color_value == 2:
-      if pos in self.white_stack:
-        self.white_stack.remove(pos)
-
-    self.empty_stack.add(pos)
 
 
-  def add_point(self, color_value, pos):
-    if color_value == 1:
-      self.black_stack.add(pos)
-    elif color_value == 2:
-      self.white_stack.add(pos)
 
-  def add_black(self, pos):
-    self.black_stack.add(pos)
-
-  def add_white(self, pos):
-    self.white_stack.add(pos)
-
-  def empty_stack(self):
-    return self.empty_stack
-
-  def black_stack(self):
-    return self.black_stack
-
-  def white_stack(self):
-    return self.white_stack
-
-  def get_stack(self, color_value):
-    if color_value == 0:
-      return self.empty_stack
-    elif color_value == 1:
-      return self.black_stack
-    elif color_value == 2:
-      return self.white_stack
-
-  def get_stack_len(self, color_value):
-    if color_value == 0:
-      return len(self.empty_stack)
-    elif color_value == 1:
-      return len(self.black_stack)
-    elif color_value == 2:
-      return len(self.white_stack)
-
-  def get_empty_number(self):
-    return len(self.empty_stack)
-
-  def get_black_number(self):
-    return len(self.black_stack)
-
-  def get_white_number(self):
-    return len(self.white_stack)
-
-  def is_the_only_empty(self, cur_pos):
-    # return true, if cur_pos is the only empty point in current empty stack
-    result = False
-    if self.get_empty_number() == 1:
-      if cur_pos in self.empty_stack:
-        result = True
-    return result
-
-  def print_debug_info(self):
-    print ('# group_id:' + str(self.group_id)),
-    print (' group_type:' + str(self.group_type)),
-    print (' Empty:' + str(self.get_empty_number())),
-    print (' Black:' + str(self.get_black_number())),
-    print (' White:' + str(self.get_white_number()))
-    
-  
 
