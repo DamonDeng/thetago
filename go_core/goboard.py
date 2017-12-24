@@ -56,7 +56,7 @@ class GoBoard(object):
 
   def apply_move(self, color, pos):
     # apply move to position
-    print('# applying move: ' + color + "  " + str(pos))
+    # print('# applying move: ' + color + "  " + str(pos))
     cur_point = self.all_points.get(pos)
     if cur_point is None:
       # incorrect position, return
@@ -332,27 +332,29 @@ class GoBoard(object):
             #make sure that the stack we are looking into is not from current group
             cur_group.add_neighbour(group_id)
 
-  def update_space_value(self):
-    review_histroy = set()
-    for group_id in self.valid_ids:
-      if not group_id in review_histroy:
-        review_histroy.add(group_id)
-        cur_group = self.group_records.get(group_id)
-        if cur_group.is_black_space():
-          black_neighbours = cur_group.get_stack(1)
-          is_neighbour_permanent = True
-          for neighbour in black_neighbours:
-            second_empty_neighbours = neighbour.get_stack(0)
-            if len(second_empty_neighbours) == 0:
-              #target black group has no empty_neighbour, it is inconsist
-              print ('warning: dead black group detected!')
-            elif len(second_empty_neighbours) == 1:
-              # source empty group is the only empty neighbour
-              second_white_neighbours = neighbour.get_stack(2)
-              if len(second_white_neighbours) == 0:
+  # def update_space_value(self):
+  #   review_histroy = set()
+  #   for group_id in self.valid_ids:
+  #     if not group_id in review_histroy:
+  #       review_histroy.add(group_id)
+  #       cur_group = self.group_records.get(group_id)
+  #       if cur_group.is_black_space():
+  #         black_neighbours = cur_group.get_stack(1)
+  #         is_neighbour_permanent = True
+  #         for neighbour in black_neighbours:
+  #           second_empty_neighbours = neighbour.get_stack(0)
+  #           if len(second_empty_neighbours) == 0:
+  #             #target black group has no empty_neighbour, it is inconsist
+  #             print ('warning: dead black group detected!')
+  #             is_neighbour_permanent = False
+  #           elif len(second_empty_neighbours) == 1:
+  #             # source empty group is the only empty neighbour
+  #             second_white_neighbours = neighbour.get_stack(2)
+  #             if len(second_white_neighbours) == 0:
+  #               #target black group has no white neighbour, 
 
-        elif cur_group.is_white_space():
-          pass
+  #       elif cur_group.is_white_space():
+  #         pass
 
 
   # ko checking

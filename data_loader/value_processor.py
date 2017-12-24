@@ -6,11 +6,13 @@ import mxnet as mx
 
 class ValueProcessor(object):
 
-    def __init__(self, sgf_file, board_size=19):
+    def __init__(self, sgf_file, board_size=19, level_limit='0d', player='all'):
         self.sgf_file = sgf_file
         self.board_col = board_size
         self.board_row = board_size
         
+        self.level_limit = level_limit # the value should be nk, nd, np, n is the level number
+        self.player = player
         self.board_length = self.board_row * self.board_col
 
         self.go_board = GoBoard(self.board_col)
@@ -31,10 +33,9 @@ class ValueProcessor(object):
             for move in setup:
               self.go_board.apply_move('b', move)
 
-
     @classmethod
-    def get_processor(cls, sgf_file):
-      return cls(sgf_file)
+    def get_processor(cls, sgf_file, board_size=19, level_limit='0d', player='all'):
+      return cls(sgf_file, board_size, level_limit, player)
 
     @classmethod
     def get_data_shape_only(cls, batch_size):
@@ -118,7 +119,7 @@ class ValueProcessor(object):
 
         enemy_color = go_board.other_color(color)
         if winner is None:
-            label = None
+            label = 0
         else:
             if winner == color:
                 # print("winner is:"+winner+"  color is:"+color +"   label is 1")
@@ -133,21 +134,23 @@ class ValueProcessor(object):
         for row in range(0, go_board.board_size):
             for col in range(0, go_board.board_size):
                 pos = (row, col)
-                if go_board.board.get(pos) == color:
-                    if go_board.go_strings[pos].liberties.size() == 1:
+                if go_board.get(pos) == color:
+                    liberties_size = go_board.get_liberties(pos)
+                    if liberties_size == 1:
                         move_array[0, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() == 2:
+                    elif liberties_size == 2:
                         move_array[1, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() >= 3:
+                    elif liberties_size >= 3:
                         move_array[2, row, col] = 1
-                if go_board.board.get(pos) == enemy_color:
-                    if go_board.go_strings[pos].liberties.size() == 1:
+                if go_board.get(pos) == enemy_color:
+                    liberties_size = go_board.get_liberties(pos)
+                    if liberties_size == 1:
                         move_array[3, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() == 2:
+                    elif liberties_size == 2:
                         move_array[4, row, col] = 1
-                    elif go_board.go_strings[pos].liberties.size() >= 3:
+                    elif liberties_size >= 3:
                         move_array[5, row, col] = 1
-                if go_board.is_simple_ko(color, pos):
+                if go_board.is_ko_by_letter(color, pos):
                     move_array[6, row, col] = 1
         return move_array, label
 

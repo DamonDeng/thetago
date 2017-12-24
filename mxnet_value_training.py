@@ -36,9 +36,11 @@ def start_training(args):
   logging.basicConfig(level=logging.INFO)
   
   # Need automaticlly way to load the class
+  print('using processor: ' + args.processor)
   if args.processor == 'FeatureProcessor':
     processor = FeatureProcessor
   elif args.processor == 'ValueProcessor':
+    
     processor = ValueProcessor
   elif args.processor == 'OriginalProcessor':
     processor = OriginalProcessor
@@ -51,7 +53,12 @@ def start_training(args):
     workers = args.workers
 
   print('using '+ str(workers) + " workers to load the SGF data")
-  data_iter = MultiThreadSGFIter(sgf_directory=data_dir, workers=workers, batch_size=args.batchsize, file_limit = args.filelimit, processor_class=processor)
+  data_iter = MultiThreadSGFIter(sgf_directory=data_dir, 
+                                workers=workers, 
+                                batch_size=args.batchsize, 
+                                file_limit = args.filelimit, 
+                                level_limit=args.levellimit,
+                                processor_class=processor)
   #data_iter = SimulatorIter( batch_size=1024)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
  
@@ -131,6 +138,7 @@ def main():
     train_parser.add_argument('--processor', '-r', default="OriginalProcessor", help='processor class')
     train_parser.add_argument('--evalmetric', '-m', default="acc", help='evaluate metric')
     train_parser.add_argument('--workers', '-w', type=int, default=-1, help='number of cpu worker')
+    train_parser.add_argument('--levellimit', default="0d", help='player level limitation: xk,xd,xp')
    
 
     args = parser.parse_args()
@@ -143,5 +151,6 @@ if __name__ == '__main__':
     main()
 
 # command format
-# python mxnet_training.py train --data data/standard --network network.original_cnn --prefix checkpoint/testing12 --learningrate 2
-    
+# python mxnet_value_training.py train --data data/standard --network network.value_res --prefix checkpoint/value_res3 --learningrate 0.2 --filelimit 1000
+# python mxnet_value_training.py train --data data/standard --network network.value_resnet --prefix checkpoint/value_res3 --learningrate 0.2 --filelimit 1000 --processor ValueProcessor --levellimit 1d --evalmetric mse
+#     

@@ -31,7 +31,8 @@ def getSymbol():
   fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=512)
   tanh3 = mx.sym.Activation(data=fc1, act_type="tanh")
   fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=num_classes)
+  tanh_out = mx.sym.Activation(data=fc2, act_type="tanh")
   # final_net = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
   # final_net = mx.sym.LogisticRegressionOutput(data=fc2, label=label)
-  final_net = mx.sym.LinearRegressionOutput(data=fc2, label=label)
+  final_net = mx.sym.LinearRegressionOutput(data=tanh_out, label=label)
   return final_net
