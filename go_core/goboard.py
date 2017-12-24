@@ -78,6 +78,7 @@ class GoBoard(object):
     # check whether the move is suicide
     if self.is_suicide(cur_color_value, pos):
       print('# warning: suicide move detected!!')
+      self.is_suicide_debug(cur_color_value, pos)
       return
 
     if self.is_ko(cur_color_value, pos):
@@ -262,8 +263,84 @@ class GoBoard(object):
           result = False
         else:
           result = True
-        
       else:
+        # current empty point has move than one neighbour has color same with current player
+        # check whether current player can kill any of the neighbour with enemy color
+        # then check whether current player will kill all of the neighbour with same color
+        up_point = cur_point.get_up()
+        down_point = cur_point.get_down()
+        left_point = cur_point.get_left()
+        right_point = cur_point.get_right()
+
+        if self.can_kill_neighbour(up_point, color_value, pos) or \
+          self.can_kill_neighbour(down_point, color_value, pos) or \
+          self.can_kill_neighbour(left_point, color_value, pos) or \
+          self.can_kill_neighbour(right_point, color_value, pos):
+          result = False
+        else:
+          # current player can't kill any of the neighbour
+          # now we need to check whether current move will kill current player
+          if self.is_suicide_neighbour(up_point, color_value, pos) and \
+            self.is_suicide_neighbour(down_point, color_value, pos) and \
+            self.is_suicide_neighbour(left_point, color_value, pos) and \
+            self.is_suicide_neighbour(right_point, color_value, pos):
+            result = True
+          else:
+            result = False
+
+    return result
+
+  def is_suicide_debug(self, color_value, pos):
+    print('# in the suicide debug')
+    result = False
+    cur_point = self.all_points.get(pos)
+    empty_group_record = self.group_records.get(cur_point.get_group_id())
+
+    if empty_group_record.is_the_only_empty(pos):
+      if empty_group_record.get_stack_len(color_value) == 0:
+        # no stone has same color with cur color, it may be suicide
+        # need to check whether current move can kill one of the neighbour
+        print('# no stone has same color with cur color')
+        up_point = cur_point.get_up()
+        down_point = cur_point.get_down()
+        left_point = cur_point.get_left()
+        right_point = cur_point.get_right()
+
+        if self.can_kill_neighbour(up_point, color_value, pos) or \
+          self.can_kill_neighbour(down_point, color_value, pos) or \
+          self.can_kill_neighbour(left_point, color_value, pos) or \
+          self.can_kill_neighbour(right_point, color_value, pos):
+          result = False
+        else:
+          result = True
+      elif empty_group_record.get_stack_len(color_value) == 1:
+        # current empty point is the only liberlity current player has
+        # need to check whether current move can kill one of the neighbour
+        print('# current empty point is the only liberlity current player has')
+        up_point = cur_point.get_up()
+        down_point = cur_point.get_down()
+        left_point = cur_point.get_left()
+        right_point = cur_point.get_right()
+
+        if self.can_kill_neighbour(up_point, color_value, pos) or \
+          self.can_kill_neighbour(down_point, color_value, pos) or \
+          self.can_kill_neighbour(left_point, color_value, pos) or \
+          self.can_kill_neighbour(right_point, color_value, pos):
+          print('can kill one of the neighbour')
+          result = False
+        else:
+          # current player can't kill any of the neighbour
+          # now we need to check whether current move will kill current player
+          print('can not kill any of the neighbour')
+          if self.is_suicide_neighbour(up_point, color_value, pos) and \
+            self.is_suicide_neighbour(down_point, color_value, pos) and \
+            self.is_suicide_neighbour(left_point, color_value, pos) and \
+            self.is_suicide_neighbour(right_point, color_value, pos):
+            result = True
+          else:
+            result = False
+      else:
+        print('# larger than 1: ' + str(empty_group_record.get_stack_len(color_value)))
         up_point = cur_point.get_up()
         down_point = cur_point.get_down()
         left_point = cur_point.get_left()
@@ -540,9 +617,43 @@ class GoBoard(object):
         empty_stack = group_record.get_stack(0)
         print('first in empty stack:' + str(empty_stack))
 
+  # get the array representing the board, 0: empty, 1: black, 2: white
+  def get_array_result(self):
+    result = np.zeros((self.board_size, self.board_size))
+    for i in range(self.board_size):
+      for j in range(self.board_size):
+        cur_point = self.all_points.get((i, j))
+        result[i][j] = cur_point.get_color()
+    return result
+
   # debuging function: return string representing current board
   ##############################
   def __str__(self):
+    result = '# GoPoints\n'
+   
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+            this_point = self.all_points.get((i, j))
+            if this_point is None:
+              line = line + '.'
+            else:
+              if this_point.get_color() == 1:
+                line = line + '*'
+              if this_point.get_color() == 2:
+                line = line + 'O'
+              if this_point.get_color() == 0:
+                line = line + '.'
+
+        result = result + line + '\n'
+    
+    (empty_score, black_score, white_score) = self.get_score()
+    
+    result = result + '# Black:' + str(black_score) + ' White:' + str(white_score) + ' Empty:' + str(empty_score) +'\n'
+
+    return result
+
+  def get_group_debug_string(self):
     result = '# GoPoints\n'
     display_letter = '.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
     display_letter_number = len(display_letter)
