@@ -2,19 +2,42 @@
   
 class Group(object):
 
-  def __init__(self, group_id, group_type):
+  def __init__(self, group_id, group_type, first_group=False):
     
     self.empty_stack = set()
     self.black_stack = set()
     self.white_stack = set()
     self.group_id = group_id
     self.group_type = group_type # group type: 0 empty group; 1 black group; 2 white group 
+    self.neighbour_groups = set()
+    self.first_group = first_group
 
   def get_group_id(self):
     return self.group_id
 
   def get_group_type(self):
     return self.group_type
+
+  def add_neighbour(self, group_id):
+    self.neighbour_groups.add(group_id)
+
+  def is_black_space(self):
+    result = False
+    if self.group_type == 0:
+      if self.get_white_number == 0:
+        if self.get_black_number > 0:
+          if not self.first_group:
+            result = True
+    return result
+
+  def is_white_space(self):
+    result = False
+    if self.group_type == 0:
+      if self.get_black_number == 0:
+        if self.get_white_number > 0:
+          if not self.first_group:
+            result = True
+    return result
 
   def get_score(self):
     empty_number = self.get_empty_number()

@@ -64,7 +64,7 @@ class OriginalProcessor(object):
 
     def get_generator(self):
 
-      # kind of urgly way to select game played by player with d or p level
+      # using new function is_level_heighter_than to filter games play by player higher than limit level
       if self.sgf.is_level_higher_than(self.level_limit):
 
         winner = self.sgf.get_winner()
@@ -93,7 +93,7 @@ class OriginalProcessor(object):
             is_target = True
             
           
-          if not color is None and not move is None:
+          if not color is None:   # and not move is None: # move is None, it is a pass move
 
             # print('-------------------------------')
             if is_target:
@@ -127,9 +127,14 @@ class OriginalProcessor(object):
         '''
 
         # print('calling feature and label from seven pane processer')
-        row, col = move
+
+        if move == None:
+          label = 361
+        else:
+          row, col = move
+          label = row * 19 + col
+
         enemy_color = go_board.other_color(color)
-        label = row * 19 + col
         move_array = np.zeros((num_planes, go_board.board_size, go_board.board_size))
 
         for row in range(0, go_board.board_size):

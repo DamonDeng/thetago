@@ -127,7 +127,7 @@ class ValueProcessor(object):
             else:
                 # print("winner is:"+winner+"  color is:"+color+"   label is 0")
                 # print("label is 0")
-                label = 0
+                label = -1
         
         move_array = np.zeros((num_planes, go_board.board_size, go_board.board_size))
         for row in range(0, go_board.board_size):

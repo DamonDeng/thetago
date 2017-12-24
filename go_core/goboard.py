@@ -28,6 +28,7 @@ class GoBoard(object):
     self.board_size = board_size
 
     self.group_records = {}
+    self.valid_group_ids = set()
 
     self.group_id_index = 0 # the first group id is 0, which is used in comming initing code.
 
@@ -43,7 +44,7 @@ class GoBoard(object):
     empty_color = 0
     working_group_id = 0
     point = self.all_points.get((0,0))
-    group_record = Group(working_group_id, empty_color)
+    group_record = Group(working_group_id, empty_color, first_group=True)
     group_record = self.update_group(point, empty_color, working_group_id, group_record)
     # print ('# update finished, group_record empty number: ' + str(group_record.get_empty_number()))
     self.group_records[working_group_id] = group_record
@@ -95,15 +96,6 @@ class GoBoard(object):
     # cur_point.set_group_id(point_group_id)
     # update the point around if they have the same color with current point
     group_record = Group(point_group_id, cur_color_value)
-    # add current point into the new group at first
-    # group_record.add_point(cur_color_value, pos)
-
-    # try to merge the friend point around
-    # group_record = self.handle_friend_point(up_point, cur_color_value, point_group_id, group_record)
-    # group_record = self.handle_friend_point(down_point, cur_color_value, point_group_id, group_record)
-    # group_record = self.handle_friend_point(left_point, cur_color_value, point_group_id, group_record)
-    # group_record = self.handle_friend_point(right_point, cur_color_value, point_group_id, group_record)
-    # save the group_record of current point
 
     group_record = self.update_group(cur_point, cur_color_value, point_group_id, group_record)
     self.group_records[point_group_id] = group_record
@@ -130,7 +122,10 @@ class GoBoard(object):
     working_group_id_set = self.handle_space_point(up_point, working_group_id_set)
     working_group_id_set = self.handle_space_point(down_point, working_group_id_set)
     working_group_id_set = self.handle_space_point(left_point, working_group_id_set)
-    working_group_id_set = self.handle_space_point(right_point, working_group_id_set) 
+    working_group_id_set = self.handle_space_point(right_point, working_group_id_set)
+
+    self.update_valid_group()
+    self.update_group_relation()
 
   def handle_friend_point(self, point, cur_color_value, point_group_id, group_record):
     if point != None and point.get_color() == cur_color_value:  
@@ -243,7 +238,8 @@ class GoBoard(object):
     
     return group_record
 
-    
+  # suicide checking
+  #########################
   def is_suicide(self, color_value, pos):
     # @todo, implement this method to check whether the move is suicide.
     result = False
@@ -281,19 +277,8 @@ class GoBoard(object):
 
     return result
 
-  def is_suicide_neighbour(self, cur_point, color_value, pos):
-    result = False
-    if cur_point == None:
-      result = True
-    else:
-      if cur_point.get_color() == color_value:
-        cur_group_record = self.group_records.get(cur_point.get_group_id())
-        if cur_group_record.is_the_only_empty(pos):
-          result = True
-      else:
-        result = True
-    return result
-
+  # to check whether current move will kill their neighbour with different color
+  # if yes, it will not be suicide
   def can_kill_neighbour(self, cur_point, color_value, pos):
     result = False
     if cur_point == None:
@@ -308,10 +293,76 @@ class GoBoard(object):
         result = False
     return result
 
+  # to check whether current move will kill the neighbour with same color
+  # if yes, it may be a suicide move
+  def is_suicide_neighbour(self, cur_point, color_value, pos):
+    result = False
+    if cur_point == None:
+      result = True
+    else:
+      if cur_point.get_color() == color_value:
+        cur_group_record = self.group_records.get(cur_point.get_group_id())
+        if cur_group_record.is_the_only_empty(pos):
+          result = True
+      else:
+        result = True
+    return result
+
+
+
+  def update_valid_group(self):
+    self.valid_group_ids = set()
+
+    for i in range(self.board_size):
+      for j in range(self.board_size):
+        point = self.all_points.get((i,j))
+        cur_group_id = point.get_group_id()
+        self.valid_group_ids.add(cur_group_id)
+
+  def update_group_relation(self):
+    for group_id in self.valid_group_ids:
+      cur_group = self.group_records.get(group_id)
+      for color_value in range(3):
+        # get stack of current group: 0:empty_stack, 1:black_stack, 2:white_stack
+        cur_stack = cur_group.get_stack(color_value)
+        for pos in cur_stack:
+          cur_point = self.all_points.get(pos)
+          cur_point_group_id = cur_point.get_group_id()
+          if cur_point_group_id != group_id:
+            #make sure that the stack we are looking into is not from current group
+            cur_group.add_neighbour(group_id)
+
+  def update_space_value(self):
+    review_histroy = set()
+    for group_id in self.valid_ids:
+      if not group_id in review_histroy:
+        review_histroy.add(group_id)
+        cur_group = self.group_records.get(group_id)
+        if cur_group.is_black_space():
+          black_neighbours = cur_group.get_stack(1)
+          is_neighbour_permanent = True
+          for neighbour in black_neighbours:
+            second_empty_neighbours = neighbour.get_stack(0)
+            if len(second_empty_neighbours) == 0:
+              #target black group has no empty_neighbour, it is inconsist
+              print ('warning: dead black group detected!')
+            elif len(second_empty_neighbours) == 1:
+              # source empty group is the only empty neighbour
+              second_white_neighbours = neighbour.get_stack(2)
+              if len(second_white_neighbours) == 0:
+
+        elif cur_group.is_white_space():
+          pass
+
+
+  # ko checking
+  #####################
+  # ko checking by letter
   def is_ko_by_letter(self, color, pos):
     color_value = self.get_color_value(color)
     return self.is_ko(color_value, pos)
 
+  # ko checking by color value
   def is_ko(self, color_value, pos):
     result = False
     if len(self.last_remove) == 1:
@@ -329,6 +380,7 @@ class GoBoard(object):
             result = True
     return result
 
+  # if current position is empty, not a ko and not suicide, it is legal
   def is_move_legal(self, color, pos):
     color_value = self.get_color_value(color)
 
@@ -351,10 +403,12 @@ class GoBoard(object):
     # @todo build the eye checking system 
     return False
     
+  # group index manager, to manage current group index, to generate group id
   def get_group_id_index(self):
     self.group_id_index = self.group_id_index + 1
     return self.group_id_index
 
+  # tools function to connect all the points in current board
   def connect_all_points(self):
     for row in range(self.board_size):
       for col in range(self.board_size):
@@ -368,6 +422,7 @@ class GoBoard(object):
         cur_point.set_left(left_point)
         cur_point.set_right(right_point)
 
+  # convert the color letter to color value
   def get_color_value(self, color):
     if color == 'b':
       color_value = 1
@@ -378,6 +433,7 @@ class GoBoard(object):
 
     return color_value
 
+  # convert the color letter to enemy's color value
   def get_enemy_color_value(self, color):
     if color == 'b':
       color_value = 2
@@ -385,9 +441,9 @@ class GoBoard(object):
       color_value = 1
     else:
       raise ValueError
-
     return color_value
 
+  # reverse the color letter
   def other_color(self, color):
     '''
     Color of other player
@@ -397,6 +453,7 @@ class GoBoard(object):
     if color == 'w':
         return 'b'
 
+  # reverse the color_value 
   def reverse_color_value(self, color_value):
     if color_value == 0:
       return 0
@@ -407,21 +464,15 @@ class GoBoard(object):
     else:
       raise ValueError
 
+  # get score of current board
+  # return: (total_empty, total_black, total_white)
   def get_score(self):
-    valid_group_ids = set()
-
-    for i in range(self.board_size):
-      for j in range(self.board_size):
-        point = self.all_points.get((i,j))
-        cur_group_id = point.get_group_id()
-        valid_group_ids.add(cur_group_id)
-
     total_empty = 0
     total_black = 0
     total_white = 0
 
     # print ('# group group_record len: ' + str(self.group_records))
-    for group_record_id in valid_group_ids:
+    for group_record_id in self.valid_group_ids:
       
       group_record = self.group_records.get(group_record_id)
       # print ('# group id: ' + str(group_record_id) + ' group type: ' + str(group_record.get_group_type())),
@@ -441,6 +492,8 @@ class GoBoard(object):
 
     return (total_empty, total_black, total_white)
 
+  # back compatiblility code: get letter of current position
+  ##################################
   def get(self, pos):
     # for back compatibility
     # return the color letter 'b' or 'w' for current position
@@ -453,6 +506,8 @@ class GoBoard(object):
     else:
       return 'e' # 'e' stand for empty
 
+  # back compatiblility code: get liberties of current position
+  ##################################
   def get_liberties(self, pos):
     # for back compatibility
     # return the number of liberties of current position
@@ -461,21 +516,15 @@ class GoBoard(object):
     cur_group_record = self.group_records.get(cur_point.get_group_id())
     return cur_group_record.get_empty_number()
 
+  # debuging function: to analyst group records
+  ##########################
   def analyst_result(self):
-    valid_group_ids = set()
-
-    for i in range(self.board_size):
-      for j in range(self.board_size):
-        point = self.all_points.get((i,j))
-        cur_group_id = point.get_group_id()
-        valid_group_ids.add(cur_group_id)
-
     total_empty = 0
     total_black = 0
     total_white = 0
 
     # print ('# group group_record len: ' + str(self.group_records))
-    for group_record_id in valid_group_ids:
+    for group_record_id in self.valid_group_ids:
       
       group_record = self.group_records.get(group_record_id)
       # print ('# group id: ' + str(group_record_id) + ' group type: ' + str(group_record.get_group_type())),
@@ -489,8 +538,8 @@ class GoBoard(object):
         empty_stack = group_record.get_stack(0)
         print('first in empty stack:' + str(empty_stack))
 
-    
-
+  # debuging function: return string representing current board
+  ##############################
   def __str__(self):
     result = '# GoPoints\n'
     display_letter = '.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
