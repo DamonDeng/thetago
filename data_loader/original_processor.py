@@ -6,8 +6,8 @@ import mxnet as mx
 
 class OriginalProcessor(object):
 
-    def __init__(self, sgf_file, board_size=19, level_limit='0d', player='all'):
-        self.sgf_file = sgf_file
+    def __init__(self, sgf_content, board_size=19, level_limit='0d', player='all'):
+        # self.sgf_file = sgf_file
         self.board_col = board_size
         self.board_row = board_size
         self.level_limit = level_limit # the value should be nk, nd, np, n is the level number
@@ -18,7 +18,7 @@ class OriginalProcessor(object):
         
         self.label = 0 # np.zeros((self.board_row * self.board_col))
 
-        sgf_content = open(sgf_file,'r').read()
+        # sgf_content = open(sgf_file,'r').read()
       
         self.sgf = Sgf_game.from_string(sgf_content)
 

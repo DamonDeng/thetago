@@ -19,7 +19,7 @@ import os
 import signal
 import sys
 import time
-
+import tarfile
 
 import numpy as np
 import six.moves.queue as queue
@@ -61,7 +61,7 @@ class MultiThreadSGFIter(mx.io.DataIter):
               break  
           number_of_file+=1
           file_path = os.path.join(self.sgf_directory, file)  
-          if os.path.splitext(file_path)[1]=='.sgf':  
+          if os.path.splitext(file_path)[1]=='.tar':  
               worker_index = worker_number%self.workers
               worker_number = worker_number + 1
               self.file_list[worker_index].append(file_path) 
@@ -163,17 +163,23 @@ def _prepare_training_data_single_process(inter_file_list, processor_class, outp
 
   for file_name in inter_file_list:
 
-    processor = processor_class.get_processor(file_name, level_limit=level_limit, player=player)
+    this_zip = tarfile.open(file_name)
+    name_list = this_zip.getnames()
+    for name in name_list:
+        if name.endswith('.sgf'):
+            sgf_content = this_zip.extractfile(name).read()
 
-    features = processor.get_generator()
+            processor = processor_class.get_processor(sgf_content, level_limit=level_limit, player=player)
 
-    for feature in features:
+            features = processor.get_generator()
 
-        data, label = feature
-        output_q.put((data, label))
-        if not stop_q.empty():
-            print("Got stop signal, aborting.")
-            return
+            for feature in features:
+
+                data, label = feature
+                output_q.put((data, label))
+                if not stop_q.empty():
+                    print("Got stop signal, aborting.")
+                    return
   
 
 def _disable_keyboard_interrupt():

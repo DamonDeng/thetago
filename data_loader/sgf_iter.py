@@ -6,6 +6,7 @@ import multiprocessing
 import signal
 import six.moves.queue as queue
 import time
+import tarfile
 
 from gosgf import Sgf_game
 from go_core.goboard import GoBoard
@@ -40,7 +41,7 @@ class SGFIter(mx.io.DataIter):
               break  
           number_of_file+=1
           file_path = os.path.join(self.sgf_directory, file)  
-          if os.path.splitext(file_path)[1]=='.sgf':  
+          if os.path.splitext(file_path)[1]=='.tar':  
               self.file_list.append(file_path) 
 
         self.generator = self.get_generator()
@@ -92,14 +93,20 @@ class SGFIter(mx.io.DataIter):
     def get_generator(self):
         for file_name in self.file_list:
 
-            processor = self.processor_class.get_processor(file_name)
+            this_zip = tarfile.open(file_name)
+            name_list = this_zip.getnames()
+            for name in name_list:
+                if name.endswith('.sgf'):
+                    sgf_content = this_zip.extractfile(name).read()
 
-            features = processor.get_generator()
+                    processor = self.processor_class.get_processor(sgf_content)
 
-            for feature in features:
+                    features = processor.get_generator()
 
-                data, label = feature
-                yield data, label
+                    for feature in features:
+
+                        data, label = feature
+                        yield data, label
                 
    
 
