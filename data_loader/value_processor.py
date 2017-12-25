@@ -41,7 +41,7 @@ class ValueProcessor(object):
     def get_data_shape_only(cls, batch_size):
       board_col = 19
       board_row = 19
-      return (batch_size, 7, board_row, board_col)
+      return (batch_size, 2, board_row, board_col)
 
     @classmethod
     def get_label_shape_only(cls, batch_size):
@@ -51,7 +51,7 @@ class ValueProcessor(object):
     def get_data_shape(cls, batch_size):
       board_col = 19
       board_row = 19
-      return [('data',(batch_size, 7, board_row, board_col))]
+      return [('data',(batch_size, 2, board_row, board_col))]
 
     @classmethod
     def get_label_shape(cls, batch_size):
@@ -115,7 +115,7 @@ class ValueProcessor(object):
         '''
 
         # print('calling feature and label from seven pane processer')
-        num_planes = 7
+        num_planes = 2
 
         enemy_color = go_board.other_color(color)
         if winner is None:
@@ -126,8 +126,8 @@ class ValueProcessor(object):
                 # print("label is 1")
                 label = 1
             else:
-                # print("winner is:"+winner+"  color is:"+color+"   label is 0")
-                # print("label is 0")
+                # print("winner is:"+winner+"  color is:"+color+"   label is -1")
+                # print("label is -1")
                 label = -1
         
         move_array = np.zeros((num_planes, go_board.board_size, go_board.board_size))
@@ -135,23 +135,11 @@ class ValueProcessor(object):
             for col in range(0, go_board.board_size):
                 pos = (row, col)
                 if go_board.get(pos) == color:
-                    liberties_size = go_board.get_liberties(pos)
-                    if liberties_size == 1:
-                        move_array[0, row, col] = 1
-                    elif liberties_size == 2:
+                    move_array[0, row, col] = 1                   
+                if go_board.get(pos) == enemy_color:                   
                         move_array[1, row, col] = 1
-                    elif liberties_size >= 3:
-                        move_array[2, row, col] = 1
-                if go_board.get(pos) == enemy_color:
-                    liberties_size = go_board.get_liberties(pos)
-                    if liberties_size == 1:
-                        move_array[3, row, col] = 1
-                    elif liberties_size == 2:
-                        move_array[4, row, col] = 1
-                    elif liberties_size >= 3:
-                        move_array[5, row, col] = 1
-                if go_board.is_ko_by_letter(color, pos):
-                    move_array[6, row, col] = 1
+                    
+                
         return move_array, label
 
 
