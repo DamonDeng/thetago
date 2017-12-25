@@ -39,6 +39,7 @@ def apply_sgf_content(file_name, sgf_name, sgf_content):
 
     color, move = item.get_move()
     if not color is None and not move is None:
+      print('applying move:' + str(color) + '   move:' + str(move))
       go_board.apply_move(color, move)
       sequence_go_board.apply_move(color, move)
 

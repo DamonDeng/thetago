@@ -51,7 +51,7 @@ class GoBoard(object):
     # print ('# update finished, group_record empty number: ' + str(group_record.get_empty_number()))
     self.group_records[working_group_id] = group_record
 
-    self.last_move = None # last move format: (pos, color_value)
+    self.last_move = ((-1, -1), -1) # last move format: (pos, color_value)
     self.last_remove = set() # init the last remove stones , it is a set.
 
 
@@ -83,9 +83,11 @@ class GoBoard(object):
       self.is_suicide_debug(cur_color_value, pos)
       return
 
-    if self.is_ko(cur_color_value, pos):
-      print('# warning: ko move detected!!')
-      return
+    (last_move_pos, last_move_color_value) = self.last_move
+    if (last_move_color_value != cur_color_value):
+      if self.is_ko(cur_color_value, pos):
+        print('# warning: ko move detected!!')
+        return
     
     # setting the color of current point.
     cur_point.set_color(cur_color_value)
@@ -665,7 +667,7 @@ class GoBoard(object):
   # debuging function: return string representing current board
   ##############################
   def __str__(self):
-    return self.get_eye_debug_string()
+    return self.get_standard_debug_string()
 
   def get_standard_debug_string(self):
     result = '# GoPoints\n'
