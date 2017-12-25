@@ -9,7 +9,7 @@ def testing():
   reader = KGSZipReader('temp_data')
   sgf_generator = reader.get_generator()
 
-  for i in range(10000):
+  for i in range(100000):
     try:
       if i%100 == 0:
         print('current game number: ' + str(i))
