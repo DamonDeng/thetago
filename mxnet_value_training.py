@@ -153,4 +153,5 @@ if __name__ == '__main__':
 # command format
 # python mxnet_value_training.py train --data data/standard --network network.value_res --prefix checkpoint/value_res3 --learningrate 0.2 --filelimit 1000
 # python mxnet_value_training.py train --data data/standard --network network.value_resnet --prefix checkpoint/value_res3 --learningrate 0.2 --filelimit 1000 --processor ValueProcessor --levellimit 1d --evalmetric mse
+# python mxnet_value_training.py train --data data/train --network network.value_resnet --prefix checkpoint/value_res3 --learningrate 0.2 --filelimit 100000 --processor ValueProcessor --levellimit 1d --evalmetric mse --batchsize 1024 --devices gpu
 #     

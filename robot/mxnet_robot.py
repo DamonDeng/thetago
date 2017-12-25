@@ -157,7 +157,7 @@ class MXNetRobot:
     print ("# applying move: " + color + " " + str(move))
     self.go_board.apply_move(color, move)
     # self.space_manager.apply_move(color, move)
-    # print (self.space_manager)
+    # print (self.go_board)
 
     if self.value_model is not None:
       # trying to compute the evaluation value of current board

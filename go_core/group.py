@@ -10,6 +10,10 @@ class Group(object):
     self.group_id = group_id
     self.group_type = group_type # group type: 0 empty group; 1 black group; 2 white group 
     self.neighbour_groups = set()
+    self.empty_neighbour_groups = set()
+    self.black_neighbour_groups = set()
+    self.white_neighbour_groups = set()
+    
     self.first_group = first_group
 
   def get_group_id(self):
@@ -18,25 +22,154 @@ class Group(object):
   def get_group_type(self):
     return self.group_type
 
-  def add_neighbour(self, group_id):
-    self.neighbour_groups.add(group_id)
+  def add_neighbour(self, target_group):
+
+    # print ('# adding neighbour group: type:' + str(target_group.get_group_type()))
+    # print ('# current group:' + str(self.group_id) + '   target group:' + str(target_group.get_group_id()))
+    self.neighbour_groups.add(target_group)
+    if target_group.get_group_type() == 0:
+      # print ('# adding empty group neighbour')
+      self.empty_neighbour_groups.add(target_group)
+    elif target_group.get_group_type() == 1:
+      # print ('# adding black group neighbour')
+      self.black_neighbour_groups.add(target_group)
+    elif target_group.get_group_type() == 2:
+      # print ('# adding white group neighbour')
+      self.white_neighbour_groups.add(target_group)
+
+  def clear_neighbour(self):
+    self.neighbour_groups = set()
+    self.empty_neighbour_groups = set()
+    self.black_neighbour_groups = set()
+    self.white_neighbour_groups = set()
+
+  def get_empty_neighbours(self):
+    return self.empty_neighbour_groups
+
+  def get_black_neighbours(self):
+    return self.black_neighbour_groups
+
+  def get_white_neighbours(self):
+    return self.white_neighbour_groups
+
+  def is_black_eye(self):
+    # print ('# trying to check black eye')
+    if self.is_black_space():
+      # print ('# is black space')
+      black_neighbour_number = len(self.black_neighbour_groups)
+      # print ('# black neighbour number: ' + str(black_neighbour_number))
+      if black_neighbour_number < 1:
+        # inconsist state
+        print('# warning: inconsist states, black space has no black neighbour')
+      elif black_neighbour_number == 1:
+        # there is only one group around this black space, it is try eye
+        return True
+      elif black_neighbour_number == 2:
+        # there are two group around this black space, 
+        # need to check whether these two have other common black space neighbour
+        # print ('# found space with two black neighbour')
+        neighbour_list = list(self.black_neighbour_groups)
+
+        neighbour1 = neighbour_list[0]
+        neighbour2 = neighbour_list[1]
+
+        further_space_groups= neighbour1.get_empty_neighbours()
+        further_eye1 = set()
+        for further_space_group in further_space_groups:
+          space_group_id = further_space_group.get_group_id()
+          # print ('# further space group id:' + str(space_group_id))
+          if space_group_id != self.group_id:
+            if further_space_group.is_black_space():
+              # print ('# further space is black space:' + str(space_group_id) + '   current id:' + str(self.group_id))
+              further_eye1.add(space_group_id)
+
+        if len(further_eye1) >= 1:
+          # print('# has further space')
+          further_space_groups = neighbour2.get_empty_neighbours()
+          
+          for further_space_group in further_space_groups:
+            space_group_id = further_space_group.get_group_id()
+            if space_group_id != self.group_id:            
+              if further_space_group.is_black_space():
+                if space_group_id in further_eye1:
+                  return True
+      else:
+        # there are more than 2 group around this balck space
+        # it is still possible that this space are true eye, 
+        # but it is too complex to check it right now,
+        # will do it when we have time, probably with some other clever way
+        return False
+    
+    return False
+
+  def is_white_eye(self):
+    if self.is_white_space():
+      white_neighbour_number = len(self.white_neighbour_groups)
+      if white_neighbour_number < 1:
+        # inconsist state
+        print('# warning: inconsist states, white space has no white neighbour')
+      elif white_neighbour_number == 1:
+        # there is only one group around this white space, it is try eye
+        return True
+      elif white_neighbour_number == 2:
+        # there are two group around this white space, 
+        # need to check whether these two have other common black space neighbour
+        
+        neighbour_list = list(self.white_neighbour_groups)
+
+        neighbour1 = neighbour_list[0]
+        neighbour2 = neighbour_list[1]
+
+        further_space_groups= neighbour1.get_empty_neighbours()
+        further_eye1 = set()
+        for further_space_group in further_space_groups:
+          space_group_id = further_space_group.get_group_id()
+          if space_group_id != self.group_id:
+            if further_space_group.is_white_space():
+              further_eye1.add(space_group_id)
+
+        if len(further_eye1) >= 1:
+          further_space_groups = neighbour2.get_empty_neighbours()
+          
+          for further_space_group in further_space_groups:
+            space_group_id = further_space_group.get_group_id()
+            if space_group_id != self.group_id:
+              
+              if further_space_group.is_white_space():
+                if space_group_id in further_eye1:
+                  return True
+      else:
+        # there are more than 2 group around this balck space
+        # it is still possible that this space are true eye, 
+        # but it is too complex to check it right now,
+        # will do it when we have time, probably with some other clever way
+        return False
+    
+    return False
+
 
   def is_black_space(self):
     result = False
+    # it is a hard fix, to make sure that large size of space is not counted as any player's space
+    max_space_number = 350
     if self.group_type == 0:
-      if self.get_white_number == 0:
-        if self.get_black_number > 0:
-          if not self.first_group:
-            result = True
+      if self.get_empty_number() < max_space_number:
+        if self.get_white_number() == 0:
+          if self.get_black_number() > 0:
+            if not self.first_group:
+              result = True
     return result
 
   def is_white_space(self):
     result = False
+    # it is a hard fix, to make sure that large size of space is not counted as any player's space
+    max_space_number = 350
     if self.group_type == 0:
-      if self.get_black_number == 0:
-        if self.get_white_number > 0:
-          if not self.first_group:
-            result = True
+      if self.get_empty_number() < max_space_number:
+        if self.get_black_number() == 0:
+          if self.get_white_number() > 0:
+            if not self.first_group:
+              result = True
     return result
 
   def get_score(self):

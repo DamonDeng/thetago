@@ -26,7 +26,7 @@ class KGSZipReader(object):
           for name in name_list:
             if name.endswith('.sgf'):
               sgf_content = this_zip.extractfile(name).read()
-              yield (file_path, sgf_content)
+              yield (file_path, name, sgf_content)
 
   
 

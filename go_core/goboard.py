@@ -29,6 +29,8 @@ class GoBoard(object):
 
     self.group_records = {}
     self.valid_group_ids = set()
+    self.black_eyes = np.zeros((self.board_size, self.board_size), dtype=int)
+    self.white_eyes = np.zeros((self.board_size, self.board_size), dtype=int)
 
     self.group_id_index = 0 # the first group id is 0, which is used in comming initing code.
 
@@ -127,6 +129,7 @@ class GoBoard(object):
 
     self.update_valid_group()
     self.update_group_relation()
+    self.update_space_value()
 
   def handle_friend_point(self, point, cur_color_value, point_group_id, group_record):
     if point != None and point.get_color() == cur_color_value:  
@@ -397,8 +400,15 @@ class GoBoard(object):
         self.valid_group_ids.add(cur_group_id)
 
   def update_group_relation(self):
+
     for group_id in self.valid_group_ids:
       cur_group = self.group_records.get(group_id)
+      # maybe we don't need to delete the relation
+      # as all the group with new neighbour are new created
+      # check the logic when we have time
+      cur_group.clear_neighbour()
+      # end of the comment
+
       for color_value in range(3):
         # get stack of current group: 0:empty_stack, 1:black_stack, 2:white_stack
         cur_stack = cur_group.get_stack(color_value)
@@ -407,32 +417,57 @@ class GoBoard(object):
           cur_point_group_id = cur_point.get_group_id()
           if cur_point_group_id != group_id:
             #make sure that the stack we are looking into is not from current group
-            cur_group.add_neighbour(group_id)
+            target_group = self.group_records.get(cur_point_group_id)
+            cur_group.add_neighbour(target_group)
 
-  # def update_space_value(self):
-  #   review_histroy = set()
-  #   for group_id in self.valid_ids:
-  #     if not group_id in review_histroy:
-  #       review_histroy.add(group_id)
-  #       cur_group = self.group_records.get(group_id)
-  #       if cur_group.is_black_space():
-  #         black_neighbours = cur_group.get_stack(1)
-  #         is_neighbour_permanent = True
-  #         for neighbour in black_neighbours:
-  #           second_empty_neighbours = neighbour.get_stack(0)
-  #           if len(second_empty_neighbours) == 0:
-  #             #target black group has no empty_neighbour, it is inconsist
-  #             print ('warning: dead black group detected!')
-  #             is_neighbour_permanent = False
-  #           elif len(second_empty_neighbours) == 1:
-  #             # source empty group is the only empty neighbour
-  #             second_white_neighbours = neighbour.get_stack(2)
-  #             if len(second_white_neighbours) == 0:
-  #               #target black group has no white neighbour, 
+  def update_space_value(self):
+    # clear the eye record
+    self.black_eyes = np.zeros((self.board_size, self.board_size), dtype=int)
+    self.white_eyes = np.zeros((self.board_size, self.board_size), dtype=int)
+    # eye checking for simple eye
+    review_histroy = set()
+    for group_id in self.valid_group_ids:
+      if not group_id in review_histroy:
+        review_histroy.add(group_id)
+        cur_group = self.group_records.get(group_id)
+        if cur_group.is_black_eye():
+          self.record_true_eye(1, cur_group)
+        elif cur_group.is_white_eye():
+          self.record_true_eye(2, cur_group)
 
-  #       elif cur_group.is_white_space():
-  #         pass
+  def record_true_eye(self, color, cur_group):
+    # print('# trying to update group record: ' + str(cur_group.get_group_id()))
+    
+    space_pos = cur_group.get_stack(0)
+    # print ('# true eye: space: ' + str(space_pos))
+    space_number = len(space_pos)
+    for pos in space_pos:
+      (row, col) = pos
+      if color == 1:
+        self.black_eyes[row][col] = space_number
+      elif color == 2:
+        self.white_eyes[row][col] = space_number
 
+  def is_true_eye(self, color, pos):
+    (row, col) = pos
+    if color == 1:
+      if self.black_eyes[row][col] > 0:
+        return True
+    elif color == 2:
+      if self.white_eyes[row][col] > 0:
+        return True
+    return False
+
+  def is_simple_true_eye(self, color, pos):
+    (row, col) = pos
+    if color == 1:
+      if self.black_eyes[row][col] == 1:
+        return True
+    elif color == 2:
+      if self.white_eyes[row][col] == 1:
+        return True
+    return False
+      
 
   # ko checking
   #####################
@@ -480,7 +515,8 @@ class GoBoard(object):
   
   def is_my_eye(self, color, pos):
     # @todo build the eye checking system 
-    return False
+    color_value = self.get_color_value(color)
+    return self.is_simple_true_eye(color_value, pos)
     
   # group index manager, to manage current group index, to generate group id
   def get_group_id_index(self):
@@ -629,6 +665,9 @@ class GoBoard(object):
   # debuging function: return string representing current board
   ##############################
   def __str__(self):
+    return self.get_eye_debug_string()
+
+  def get_standard_debug_string(self):
     result = '# GoPoints\n'
    
     for i in range(self.board_size - 1, -1, -1):
@@ -651,6 +690,32 @@ class GoBoard(object):
     
     result = result + '# Black:' + str(black_score) + ' White:' + str(white_score) + ' Empty:' + str(empty_score) +'\n'
 
+    return result
+
+  def get_eye_debug_string(self):
+    result = '# GoBoard black eyes:\n'
+   
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+          if self.black_eyes[i][j] == 0:
+            line = line + '.'
+          elif self.black_eyes[i][j] > 0:
+            line = line + str(self.black_eyes[i][j])
+        result = result + line + '\n'
+
+    result = result + '# GoBoard white eyes:\n'
+   
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+          if self.white_eyes[i][j] == 0:
+            line = line + '.'
+          elif self.white_eyes[i][j] > 0:
+            line = line + str(self.white_eyes[i][j])
+        result = result + line + '\n'
+    
+    
     return result
 
   def get_group_debug_string(self):

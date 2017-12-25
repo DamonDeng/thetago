@@ -6,21 +6,21 @@ import numpy as np
 
 
 def testing():
-  reader = KGSZipReader('data')
+  reader = KGSZipReader('temp_data')
   sgf_generator = reader.get_generator()
 
   for i in range(10000):
     try:
       if i%100 == 0:
         print('current game number: ' + str(i))
-      (file_name, sgf_content) = sgf_generator.next()
-      apply_sgf_content(file_name, sgf_content)
+      (file_name, sgf_name, sgf_content) = sgf_generator.next()
+      apply_sgf_content(file_name, sgf_name, sgf_content)
     except StopIteration:
       print('finished all the files')
       break
 
 
-def apply_sgf_content(file_name, sgf_content):
+def apply_sgf_content(file_name, sgf_name, sgf_content):
   sgf = Sgf_game.from_string(sgf_content)
 
   main_sequence_iter = sgf.main_sequence_iter()
@@ -47,6 +47,7 @@ def apply_sgf_content(file_name, sgf_content):
 
       if not array_equal(go_board_result, sequence_go_board_result):
         print('inconsist!!!!!' + file_name)
+        print('sgf file: ' + sgf_name)
         print('color:' + str(color))
         print('move: ' + str(move))
 
