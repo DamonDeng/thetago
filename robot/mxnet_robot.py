@@ -3,6 +3,8 @@ import numpy as np
 from data_loader.sgf_iter import  SimulatorIter, SGFIter
 import logging
 from go_core.goboard import GoBoard
+from go_core.array_goboard import ArrayGoBoard
+
 import copy
 from data_loader.original_processor import OriginalProcessor
 from data_loader.value_processor import ValueProcessor
@@ -27,7 +29,7 @@ class MXNetRobot:
       value_mod.set_params(value_arg_params, value_aux_params, allow_missing=True)
       self.value_model = value_mod
     
-    self.go_board = GoBoard(self.board_size)
+    self.go_board = ArrayGoBoard(self.board_size)
     # self.space_manager = SpaceManager(19)
     # print (self.space_manager)
     self.processor_class = processor_class
@@ -40,7 +42,7 @@ class MXNetRobot:
     return self.go_board
 
   def reset_board(self):
-    self.go_board = GoBoard(self.board_size)
+    self.go_board = ArrayGoBoard(self.board_size)
 
   def get_position(self, input_number):
     row = int(input_number/self.board_size)
@@ -157,7 +159,7 @@ class MXNetRobot:
     print ("# applying move: " + color + " " + str(move))
     self.go_board.apply_move(color, move)
     # self.space_manager.apply_move(color, move)
-    # print (self.go_board)
+    print (self.go_board)
 
     if self.value_model is not None:
       # trying to compute the evaluation value of current board
