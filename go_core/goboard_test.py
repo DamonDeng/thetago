@@ -7,22 +7,22 @@ import numpy as np
 import time
 
 def speed_testing():
-  reader = KGSZipReader('data')
-  sgf_generator = reader.get_generator()
+  # reader = KGSZipReader('data')
+  # sgf_generator = reader.get_generator()
 
-  time_start=time.time() 
-  for i in range(100):
-    try:
-      if i%100 == 0:
-        print('current game number: ' + str(i))
-      (file_name, sgf_name, sgf_content) = sgf_generator.next()
-      target_board = GoBoard(19)
-      apply_sgf_content_to(file_name, sgf_name, sgf_content, target_board)
-    except StopIteration:
-      print('finished all the files')
-      break
-  time_end=time.time() 
-  print ('time for GoBoard: '+ str(time_end-time_start))
+  # time_start=time.time() 
+  # for i in range(100):
+  #   try:
+  #     if i%100 == 0:
+  #       print('current game number: ' + str(i))
+  #     (file_name, sgf_name, sgf_content) = sgf_generator.next()
+  #     target_board = GoBoard(19)
+  #     apply_sgf_content_to(file_name, sgf_name, sgf_content, target_board)
+  #   except StopIteration:
+  #     print('finished all the files')
+  #     break
+  # time_end=time.time() 
+  # print ('time for GoBoard: '+ str(time_end-time_start))
 
   reader = KGSZipReader('data')
   sgf_generator = reader.get_generator()
@@ -41,22 +41,22 @@ def speed_testing():
   time_end=time.time(); 
   print ('time for ArrayGoBoard: '+ str(time_end-time_start))
 
-  reader = KGSZipReader('data')
-  sgf_generator = reader.get_generator()
+  # reader = KGSZipReader('data')
+  # sgf_generator = reader.get_generator()
 
-  time_start=time.time()
-  for i in range(100):
-    try:
-      if i%100 == 0:
-        print('current game number: ' + str(i))
-      (file_name, sgf_name, sgf_content) = sgf_generator.next()
-      target_board = SequenceGoBoard(19)
-      apply_sgf_content_to(file_name, sgf_name, sgf_content, target_board)
-    except StopIteration:
-      print('finished all the files')
-      break
-  time_end=time.time(); 
-  print ('time for SequenceGoBoard: '+ str(time_end-time_start))
+  # time_start=time.time()
+  # for i in range(100):
+  #   try:
+  #     if i%100 == 0:
+  #       print('current game number: ' + str(i))
+  #     (file_name, sgf_name, sgf_content) = sgf_generator.next()
+  #     target_board = SequenceGoBoard(19)
+  #     apply_sgf_content_to(file_name, sgf_name, sgf_content, target_board)
+  #   except StopIteration:
+  #     print('finished all the files')
+  #     break
+  # time_end=time.time(); 
+  # print ('time for SequenceGoBoard: '+ str(time_end-time_start))
 
   
 
@@ -143,5 +143,47 @@ def array_equal(first_array, second_array):
   
   return True
 
+def move_array_test():
+  reader = KGSZipReader('data')
+  sgf_generator = reader.get_generator()
+
+  
+  for i in range(10):
+    try:
+      
+      print('current game number: ' + str(i))
+      (file_name, sgf_name, sgf_content) = sgf_generator.next()
+      go_board = ArrayGoBoard(19)
+      
+
+      sgf = Sgf_game.from_string(sgf_content)
+
+      main_sequence_iter = sgf.main_sequence_iter()
+
+
+      if sgf.get_handicap() != None and sgf.get_handicap() != 0:
+        # print('handling handicap')
+        for setup in sgf.get_root().get_setup_stones():
+          for move in setup:
+            go_board.apply_move('b', move)
+            
+
+      for item in main_sequence_iter:
+
+        color, move = item.get_move()
+        if not color is None and not move is None:
+          # print('applying move:' + str(color) + '   move:' + str(move))
+          go_board.apply_move(color, move)
+          move_array = go_board.get_move_array(8, color)
+          print ('-----------------------------')
+          print (str(move_array[0]))
+
+    except StopIteration:
+      print('finished all the files')
+      break
+
 # testing()
-speed_testing()
+# speed_testing()
+
+
+move_array_test()

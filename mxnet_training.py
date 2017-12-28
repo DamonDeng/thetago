@@ -6,6 +6,7 @@ import logging
 from data_loader.feature_processor import FeatureProcessor
 from data_loader.original_processor import OriginalProcessor
 from data_loader.value_processor import ValueProcessor
+from data_loader.zero_processor import ZeroProcessor
 
 from sys import argv
 import sys
@@ -42,6 +43,8 @@ def start_training(args):
     processor = ValueProcessor
   elif args.processor == 'OriginalProcessor':
     processor = OriginalProcessor
+  elif args.processor == 'ZeroProcessor':
+    processor = ZeroProcessor
   else:
     processor = OriginalProcessor
 

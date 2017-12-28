@@ -4,21 +4,29 @@ import copy
 
 class ArrayGoBoard(object):
 
-  def __init__(self, board_size=19):
+  def __init__(self, board_size=19, eye_checking = False):
     self.board_size = board_size
-    self.reset(board_size)
+    self.reset(board_size, eye_checking)
 
-  def reset(self, board_size):
+  def reset(self, board_size, eye_checking = False):
     self.board_size = board_size        
     self.history_length = 1024
     self.move_number = 0
     self.board = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
+    self.black_history = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
+    self.white_history = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
     self.review_record = np.zeros((self.board_size, self.board_size), dtype=int)
     self.potential_ko = False
     self.ko_remove = (-1, -1)
     self.last_move = (-1, -1)
     self.last_move_color_value = 0
+    self.black_eye_state = np.zeros((self.board_size, self.board_size), dtype=int)
+    self.white_eye_state = np.zeros((self.board_size, self.board_size), dtype=int)
+    self.eye_checking = eye_checking
 
+    self.zero_array = np.zeros((self.board_size, self.board_size), dtype=int)
+    self.one_array = np.ones((self.board_size, self.board_size), dtype=int)
+    
     
 
 
@@ -44,6 +52,8 @@ class ArrayGoBoard(object):
     
     # copy last state to current state, get ready to apply move
     self.board[cur_move_number] = self.board[last_move_number]
+    self.black_history[cur_move_number] = self.black_history[last_move_number]
+    self.white_history[cur_move_number] = self.white_history[last_move_number]
 
     # for performance, doesn't check ko here, will apply it anyway.
     # need to make sure it is not a ko before we call apply_move
@@ -51,7 +61,10 @@ class ArrayGoBoard(object):
     #   return
 
     self.board[cur_move_number][row][col] = color_value
-
+    if color_value == 1:
+      self.black_history[cur_move_number][row][col] = 1
+    elif color_value == 2:
+      self.white_history[cur_move_number][row][col] = 1
     
     up_removed = self.remove_if_enemy_dead(cur_move_number, row+1, col, enemy_color_value)
     right_removed = self.remove_if_enemy_dead(cur_move_number, row, col+1, enemy_color_value)
@@ -79,6 +92,9 @@ class ArrayGoBoard(object):
         self.ko_remove = (row-1, col)
       elif left_removed == 1:
         self.ko_remove = (row, col-1)
+
+    if self.eye_checking:
+      self.update_eye_state()
 
     self.move_number = self.move_number + 1
     self.last_move_color_value = color_value
@@ -116,6 +132,10 @@ class ArrayGoBoard(object):
         for j in range(self.board_size):
           if self.review_record[i][j] == 1:
             self.board[cur_move_number][i][j] = 0
+            if target_color_value == 1:
+              self.black_history[cur_move_number][i][j] = 0
+            elif target_color_value == 2:
+              self.white_history[cur_move_number][i][j] = 0
             removed_number = removed_number + 1
       return removed_number
 
@@ -240,7 +260,7 @@ class ArrayGoBoard(object):
 
   def update_eye_state(self):
     self.black_eye_state = np.zeros((self.board_size, self.board_size), dtype=int)
-    self.black_eye_state = np.zeros((self.board_size, self.board_size), dtype=int)
+    self.white_eye_state = np.zeros((self.board_size, self.board_size), dtype=int)
     
     self.potential_black_eyes = set()
     self.potential_white_eyes = set()
@@ -256,7 +276,7 @@ class ArrayGoBoard(object):
             self.potential_black_eyes.add((i,j))
     
     for potential_location in self.potential_black_eyes:
-      self.check_potential_location(check_potential_location, 1)
+      self.check_potential_location(potential_location, 1)
 
     for i in range(self.board_size):
       for j in range(self.board_size):
@@ -269,10 +289,10 @@ class ArrayGoBoard(object):
             self.potential_white_eyes.add((i,j))
     
     for potential_location in self.potential_white_eyes:
-      self.check_potential_location(check_potential_location, 2)
+      self.check_potential_location(potential_location, 2)
             
           
-  def is_eye(row, col, color_value):
+  def is_eye(self, row, col, color_value):
     if self.board[self.move_number][row][col] != 0:
       return False
 
@@ -294,7 +314,7 @@ class ArrayGoBoard(object):
 
     return True
   
-  def get_eye_type(row, col, color_value):
+  def get_eye_type(self, row, col, color_value):
     # detect the type of eye: 0: false eye, 1: true eye, 2: potential true eye
 
     enemy_color_value = self.reverse_color_value(color_value)
@@ -574,10 +594,37 @@ class ArrayGoBoard(object):
     result = self.board[self.move_number]
     return result
 
+  def get_move_array(self, history_length, color):
+    result = np.zeros((history_length*2+1, self.board_size, self.board_size), dtype=int)
+    color_value = self.get_color_value(color)
+
+    for i in range(history_length):
+      cur_point = self.move_number - i
+      if cur_point < 0:
+        result[i*2] = self.zero_array
+        result[i*2 + 1] = self.zero_array
+      else:
+        if color_value == 1:
+          result[i*2] = self.black_history[cur_point]
+          result[i*2 + 1] = self.white_history[cur_point]
+        elif color_value == 2:
+          result[i*2] = self.white_history[cur_point]
+          result[i*2 + 1] = self.black_history[cur_point]
+
+    if color_value == 1:
+      result[-1] = self.one_array
+    elif color_value == 2:
+      result[-1] = self.zero_array
+
+    return result
+
   # debuging function: return string representing current board
   ##############################
   def __str__(self):
-    return self.get_standard_debug_string()
+    result = self.get_standard_debug_string()
+    result = result + self.get_eye_debug_string()
+    result = result + self.get_history_debug_string()
+    return result
 
   def get_standard_debug_string(self):
     result = '# GoPoints\n'
@@ -591,6 +638,47 @@ class ArrayGoBoard(object):
                 line = line + 'O'
               if self.board[self.move_number][i][j] == 0:
                 line = line + '.'
+
+        result = result + line + '\n'
+    
+    return result
+
+  def get_eye_debug_string(self):
+    result = '# ArrayGoBoard, eye:\n'
+    result = result + '# Black eye:\n'
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+              line = line + str(self.black_eye_state[i][j])
+
+        result = result + line + '\n'
+
+    result = result + '# White eye:\n'
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+              line = line + str(self.white_eye_state[i][j])
+
+        result = result + line + '\n'
+    
+    return result
+
+  def get_history_debug_string(self):
+    result = '# ArrayGoBoard, history\n'
+    
+    result = result + '# Black history:\n'
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+              line = line + str(self.black_history[self.move_number][i][j])
+
+        result = result + line + '\n'
+
+    result = result + '# White history:\n'
+    for i in range(self.board_size - 1, -1, -1):
+        line = '# '
+        for j in range(0, self.board_size):
+              line = line + str(self.white_history[self.move_number][i][j])
 
         result = result + line + '\n'
     
