@@ -55,8 +55,7 @@ def start_training(args):
                                 batch_size=args.batchsize, 
                                 file_limit = args.filelimit, 
                                 processor_class=processor, 
-                                level_limit=args.levellimit,
-                                player=args.player)
+                                level_limit=args.levellimit)
   #data_iter = SimulatorIter( batch_size=1024)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
  
@@ -76,6 +75,7 @@ def start_training(args):
 
 
   try:
+    print('started to traing....')
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
             eval_metric=args.evalmetric,
@@ -134,7 +134,7 @@ def main():
     train_parser.add_argument('--filelimit', '-f', type=float, default=-1, help='limitation of sgf file')
     train_parser.add_argument('--gpunumber', '-g', type=int, default=1, help='number of gpu')
     train_parser.add_argument('--processor', '-r', default="OriginalProcessor", help='processor class')
-    train_parser.add_argument('--evalmetric', '-m', default="acc", help='evaluate metric')
+    train_parser.add_argument('--evalmetric', '-m', default="acc", help='evaluate metric, acc, sme, ce')
     train_parser.add_argument('--levellimit', default="0d", help='player level limitation: xk,xd,xp')
     train_parser.add_argument('--player', default="all", help='player: all, winner, loser')
     train_parser.add_argument('--oldmodel', default="keyword_none", help='the old model you want to load')
@@ -152,4 +152,6 @@ if __name__ == '__main__':
 
 # command format
 # python mxnet_training.py train --data data/standard --network network.original_cnn --prefix checkpoint/testing12 --learningrate 2
+# python mxnet_training.py train --data data --network network.resnet --prefix checkpoint/zero_resnet --learningrate 0.1 --processor ZeroProcessor --filelimit 10 --levellimit 0d --batchsize 16 --evalmetric ce
+# python mxnet_training.py train --data data --network network.resnet --prefix checkpoint/zero_resnet --learningrate 0.1 --processor ZeroProcessor --filelimit 50 --levellimit 0d --device gpu --gpunumber 8 --evalmetric ce --batchsize 2056
     

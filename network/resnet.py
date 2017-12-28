@@ -25,7 +25,7 @@ def getSymbol():
   flatten = mx.sym.Flatten(data=res_net)
   fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=512)
   tanh3 = mx.sym.Activation(data=fc1, act_type="tanh")
-  fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=361)
+  fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=num_classes)
   final_net = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 
   return final_net
