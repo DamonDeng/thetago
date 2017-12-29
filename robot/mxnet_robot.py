@@ -17,7 +17,8 @@ class MXNetRobot:
 
     sym, arg_params, aux_params = mx.model.load_checkpoint(checkpoint_file, epoch)
     mod = mx.mod.Module(symbol=sym, label_names=None, context=mx.cpu(0))
-    mod.bind(for_training=False, data_shapes=[('data', (1,7,19,19))], label_shapes=mod._label_shapes)
+    data_shapes = processor_class.get_data_shape(1)
+    mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=mod._label_shapes)
     mod.set_params(arg_params, aux_params, allow_missing=True)
     self.model = mod
 
@@ -25,30 +26,31 @@ class MXNetRobot:
     if value_file is not None and value_epoch is not None:
       value_sym, value_arg_params, value_aux_params = mx.model.load_checkpoint(value_file, value_epoch)
       value_mod = mx.mod.Module(symbol=value_sym, label_names=None, context=mx.cpu(0))
-      value_mod.bind(for_training=False, data_shapes=[('data', (1,7,19,19))], label_shapes=value_mod._label_shapes)
+      value_mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=value_mod._label_shapes)
       value_mod.set_params(value_arg_params, value_aux_params, allow_missing=True)
       self.value_model = value_mod
     
-    self.go_board = ArrayGoBoard(self.board_size)
+    self.go_board = ArrayGoBoard(self.board_size, eye_checking=True)
     # self.space_manager = SpaceManager(19)
     # print (self.space_manager)
     self.processor_class = processor_class
     self.value_processor_class = value_processor_class
     
-  def reset_board(self, board_size):
-    self.go_board.reset(board_size)
 
   def get_board(self):
     return self.go_board
 
   def reset_board(self):
-    self.go_board = ArrayGoBoard(self.board_size)
+    self.go_board = ArrayGoBoard(self.board_size, eye_checking=True)
 
   def get_position(self, input_number):
-    row = int(input_number/self.board_size)
-    col = input_number%self.board_size
+    if input_number == 361:
+      return None
+    else:
+      row = int(input_number/self.board_size)
+      col = input_number%self.board_size
 
-    return (row, col)
+      return (row, col)
 
   def get_move(self, predict_result):
     # sort the predict result and return
@@ -62,9 +64,12 @@ class MXNetRobot:
 
   def select_move(self, color):
 
-    data,label = self.processor_class.feature_and_label(color, (0,0), self.go_board, 7)
+    # we should modify this part of code to make it auto
+    data,label = self.processor_class.feature_and_label(color, (0,0), self.go_board)
 
-    input_data = np.zeros((1,7,19,19))
+    (input_data_label, input_data_shape) = self.processor_class.get_single_data_shape()[0]
+
+    input_data = np.zeros(input_data_shape)
     
     input_data[0] = data
 

@@ -9,7 +9,7 @@ from robot.mxnet_robot import MXNetRobot
 
 from gtp import GTPFrontend
 from data_loader.original_processor import OriginalProcessor
-
+from data_loader.zero_processor import ZeroProcessor
 
 checkpoint_file = argv[1]
 epoch = int(argv[2])
@@ -17,13 +17,15 @@ epoch = int(argv[2])
 if len(argv) > 3:
   value_file = argv[3]
   value_epoch = int(argv[4])
+  
 else:
   value_file = None
   value_epoch = None
 
-processor = OriginalProcessor
-bot = MXNetRobot(checkpoint_file, epoch, processor, value_file, value_epoch)
+# processor = OriginalProcessor
+processor = ZeroProcessor
 
+bot = MXNetRobot(checkpoint_file, epoch, processor, value_file, value_epoch)
 
 frontend = GTPFrontend(bot=bot)
 

@@ -97,7 +97,7 @@ class ZeroProcessor(object):
 
             # print('-------------------------------')
             if is_target:
-              data,label = self.feature_and_label(color, move, self.go_board, 8)
+              data,label = self.feature_and_label(color, move, self.go_board)
             # print('color:'+color + '   move:'+str(move))
 
             if not move is None:
@@ -109,7 +109,7 @@ class ZeroProcessor(object):
 
     
     @classmethod    
-    def feature_and_label(cls, color, move, go_board, history_length):
+    def feature_and_label(cls, color, move, go_board):
         '''
         Parameters
         ----------
@@ -126,7 +126,7 @@ class ZeroProcessor(object):
 
         # print('calling feature and label from seven pane processer')
 
-
+        history_length = 8
 
         if move == None:
           label = 361

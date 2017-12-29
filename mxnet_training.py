@@ -37,6 +37,7 @@ def start_training(args):
   logging.basicConfig(level=logging.INFO)
   
   # Need automaticlly way to load the class
+  print('using processor: ' + args.processor)
   if args.processor == 'FeatureProcessor':
     processor = FeatureProcessor
   elif args.processor == 'ValueProcessor':
@@ -75,7 +76,7 @@ def start_training(args):
 
 
   try:
-    print('started to traing....')
+    print('started to tran....')
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
             eval_metric=args.evalmetric,
