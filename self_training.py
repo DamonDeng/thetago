@@ -6,7 +6,9 @@ import logging
 from data_loader.feature_processor import FeatureProcessor
 from data_loader.original_processor import OriginalProcessor
 from data_loader.value_processor import ValueProcessor
+from data_loader.zero_processor import ZeroProcessor
 from robot.mxnet_robot import MXNetRobot
+
 
 from sys import argv
 import sys
@@ -14,6 +16,9 @@ import importlib
 import os
 import argparse
 from multiprocessing import cpu_count
+
+import time
+
 
 def start_training(args):
 
@@ -39,15 +44,19 @@ def start_training(args):
     processor = ValueProcessor
   elif args.processor == 'OriginalProcessor':
     processor = OriginalProcessor
+  elif args.processor == 'ZeroProcessor':
+    processor = ZeroProcessor
   else:
-    processor = OriginalProcessor
+    processor = ZeroProcessor
 
-  
+  print('parameter: ' + args.processor)
+  print('using processor: ' + str(processor))
 
   learner_bot = MXNetRobot(model_prefix, model_epoche, processor)
   teacher_bot = MXNetRobot(model_prefix, model_epoche, processor)
 
   print('starting to play')
+  time_start=time.time()
   for i in range(400):
     print('.'),
     position1 = learner_bot.select_move('b')
@@ -60,13 +69,17 @@ def start_training(args):
     if position1 is None and position2 is None:
       break
   
+  time_end=time.time()
+
+  print('time used: ' + str(time_end - time_start))
+  
   print(learner_bot.get_board())
 
-  (empty_score, black_core, white_score) = learner_bot.get_score()
+  # (empty_score, black_core, white_score) = learner_bot.get_score()
 
-  print ('Black:' + str(black_core) + ' White:' + str(white_score) + ' Empty:' + str(empty_score))
+  # print ('Black:' + str(black_core) + ' White:' + str(white_score) + ' Empty:' + str(empty_score))
 
-  learner_bot.analyst_result()
+  # learner_bot.analyst_result()
 
   
 
@@ -115,7 +128,7 @@ def main():
     train_parser.add_argument('--learningrate', '-l', type=float, default=0.1, help='Learning rate')
     train_parser.add_argument('--filelimit', '-f', type=float, default=-1, help='limitation of sgf file')
     train_parser.add_argument('--gpunumber', '-g', type=int, default=1, help='number of gpu')
-    train_parser.add_argument('--processor', '-r', default="OriginalProcessor", help='processor class')
+    train_parser.add_argument('--processor', '-r', default="ZeroProcessor", help='processor class')
     train_parser.add_argument('--evalmetric', '-m', default="acc", help='evaluate metric')
     train_parser.add_argument('--levellimit', default="0d", help='player level limitation: xk,xd,xp')
     train_parser.add_argument('--player', default="all", help='player: all, winner, loser')

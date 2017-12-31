@@ -46,6 +46,11 @@ class ArrayGoBoard(object):
 
 
   def apply_move(self, color, pos):
+
+    if pos is None:
+      # current player pass, just return
+      return 
+
     # apply move to position
     # print('# applying move: ' + color + "  " + str(pos))
     last_move_number = self.move_number
@@ -108,7 +113,7 @@ class ArrayGoBoard(object):
         self.ko_remove[cur_move_number] = (row, col-1)
 
     if self.eye_checking:
-      print('# trying to check the eye state')
+      # print('# trying to check the eye state')
       self.update_eye_state(cur_move_number)
 
     self.move_history_color_value[cur_move_number] = color_value
@@ -625,10 +630,15 @@ class ArrayGoBoard(object):
 
 
   def is_my_eye(self, color, pos):
+    if pos is None:
+      return False
     color_value = self.get_color_value(color)
     return self.is_simple_true_eye(color_value, pos)
 
   def is_simple_true_eye(self, color_value, pos):
+    if pos is None:
+      return False
+
     (row, col) = pos
     if color_value == 1:
       if self.black_eye_state[self.move_number][row][col] == 1:
@@ -640,8 +650,11 @@ class ArrayGoBoard(object):
       
   # if current position is empty, not a ko and not suicide, it is legal
   def is_move_legal(self, color, pos):
-    # apply move to position
-    # print('# applying move: ' + color + "  " + str(pos))
+    
+    if pos is None:
+      # the position is None, that means this player pass, it is a legal move.
+      return True
+    
     last_move_number = self.move_number
     cur_move_number = self.move_number + 1
 
@@ -834,9 +847,9 @@ class ArrayGoBoard(object):
   ##############################
   def __str__(self):
     result = ''
-    # result = result + self.get_standard_debug_string()
-    result = result + self.get_wall_mark_debug_string()
-    result = result + self.get_eye_debug_string()
+    result = result + self.get_standard_debug_string()
+    # result = result + self.get_wall_mark_debug_string()
+    # result = result + self.get_eye_debug_string()
     # result = result + self.get_history_debug_string()
     
     return result
