@@ -31,6 +31,9 @@ class ArrayGoBoard(object):
     self.black_eye_state = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
     self.white_eye_state = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
     
+    self.wall_mark = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
+    self.wall_mark_index = 0
+
     self.review_record = np.zeros((self.board_size, self.board_size), dtype=int)
     
     self.eye_checking = eye_checking
@@ -199,115 +202,159 @@ class ArrayGoBoard(object):
       # print('# current point has enemy stone')
       return True
 
+  def reset_wall_mark_index(self):
+    self.wall_mark_index = 0
 
+  def get_next_wall_mark_index(self):
+    self.wall_mark_index = self.wall_mark_index + 1
+    return self.wall_mark_index
 
    
-  
-
-  # def is_true_eye(self, color, pos):
-  #   (row, col) = pos
-  #   if color == 1:
-  #     if self.black_eye_state[row][col] > 0:
-  #       return True
-  #   elif color == 2:
-  #     if self.white_eye_state[row][col] > 0:
-  #       return True
-  #   return False
-
-  def is_my_eye(self, color, pos):
-    color_value = self.get_color_value(color)
-    return self.is_simple_true_eye(color_value, pos)
-
-  def is_simple_true_eye(self, color_value, pos):
-    (row, col) = pos
-    if color_value == 1:
-      if self.black_eye_state[self.move_number][row][col] == 1:
-        return True
-    elif color_value == 2:
-      if self.white_eye_state[self.move_number][row][col] == 1:
-        return True
-    return False
-      
-  # if current position is empty, not a ko and not suicide, it is legal
-  def is_move_legal(self, color, pos):
-    # apply move to position
-    # print('# applying move: ' + color + "  " + str(pos))
-    last_move_number = self.move_number
-    cur_move_number = self.move_number + 1
-
-    if cur_move_number >= self.history_length:
-      # this board has more than 1024 moves, it is full, just return False
-      return False
-
-    (row, col) = pos
-    color_value = self.get_color_value(color)
-    enemy_color_value = self.get_enemy_color_value(color)
-
-    if self.board[last_move_number][row][col] != 0:
-      # current point is not empty, it is illegal, return False
-      return False
-    
-    if self.potential_ko:
-      # if last move is a potential ko move
-      if color_value != self.move_history_color_value[last_move_number]:
-        # last move is played by enemy
-        if self.ko_remove == pos:
-          # it is a Ko, it is illegal, return False
-          return False
-
-    # copy last state to current state, for suicide checking
-    self.board[cur_move_number] = self.board[last_move_number]
-
-    self.board[cur_move_number][row][col] = color_value
-
-    up_removed = self.remove_if_dead(cur_move_number, row+1, col)
-    right_removed = self.remove_if_dead(cur_move_number, row, col+1)
-    down_removed = self.remove_if_dead(cur_move_number, row-1, col)
-    left_removed = self.remove_if_dead(cur_move_number, row, col-1)
-
-    if not (up_removed > 0 or right_removed >0 or down_removed > 0 or left_removed > 0):
-      suicide_number = self.remove_if_dead(cur_move_number, row, col)
-      if suicide_number > 0:
-        # it is suicide, return False
-        return False
-
-    #make sure that we didn't update the self.move_number here, as it is a simulation for legal checking
-
-    # it is not empty, it is not a ko, and it it not suicide either, it is legal
-    return True
-
   def update_eye_state(self, cur_move_number):
     self.black_eye_state[cur_move_number] = np.zeros((self.board_size, self.board_size), dtype=int)
     self.white_eye_state[cur_move_number] = np.zeros((self.board_size, self.board_size), dtype=int)
+
+    self.wall_mark[cur_move_number] = np.zeros((self.board_size, self.board_size), dtype=int)
+    self.reset_wall_mark_index()
     
     self.potential_black_eyes = set()
     self.potential_white_eyes = set()
 
-    for i in range(self.board_size):
-      for j in range(self.board_size):
-        if self.is_eye(cur_move_number, i, j, 1):
-          eye_type = self.get_eye_type(cur_move_number, i, j, 1)
-          if eye_type == 1:
-            self.black_eye_state[cur_move_number][i][j] = 1
-          elif eye_type == 2:
-            self.black_eye_state[cur_move_number][i][j] = 2
-            self.potential_black_eyes.add((i,j))
-    
-    for potential_location in self.potential_black_eyes:
-      self.check_potential_location(cur_move_number, potential_location, 1)
+    permanent_black_wall = set()
+    permanent_white_wall = set()
+
+    black_eye_with_wall = {}
+    white_eye_with_wall = {}
+
+    black_wall_with_eye = {}
+    white_wall_with_eye = {}
 
     for i in range(self.board_size):
       for j in range(self.board_size):
-        if self.is_eye(cur_move_number, i, j, 2):
-          eye_type = self.get_eye_type(cur_move_number, i, j, 2)
-          if eye_type == 1:
+        if self.is_eye(cur_move_number, i, j, 1):
+          self.wall_review(cur_move_number, i, j, 1)
+          wall_list = self.get_wall(cur_move_number, i, j, 1)
+          if len(wall_list) == 0:
+            print('# warning, detect an eye with no wall!')
+          elif len(wall_list) == 1:
+            self.black_eye_state[cur_move_number][i][j] = 1
+            permanent_black_wall.add(wall_list[0])
+          elif len(wall_list) > 1:
+            black_eye_with_wall[(i, j)] = wall_list
+            for wall_id in wall_list:
+              eye_list = black_wall_with_eye.get(wall_id)
+              if eye_list is None:
+                new_eye_list = set()
+                new_eye_list.add((i,j))
+                black_wall_with_eye[wall_id] = new_eye_list
+                # print('# after adding first eye:' + str(black_wall_with_eye[wall_id]))
+              else:
+                eye_list.add((i,j))
+                black_wall_with_eye[wall_id] = eye_list
+                # print('# after adding new eye:' + str(black_wall_with_eye[wall_id]))
+        elif self.is_eye(cur_move_number, i, j, 2): 
+          self.wall_review(cur_move_number, i, j, 2)
+          wall_list = self.get_wall(cur_move_number, i, j, 2)
+          if len(wall_list) == 0:
+            print('# warning, detect an eye with no wall!')
+          elif len(wall_list) == 1:
             self.white_eye_state[cur_move_number][i][j] = 1
-          elif eye_type == 2:
-            self.white_eye_state[cur_move_number][i][j] = 2
-            self.potential_white_eyes.add((i,j))
+            permanent_white_wall.add(wall_list[0])
+          elif len(wall_list) > 1:
+            white_eye_with_wall[(i, j)] = wall_list
+            for wall_id in wall_list:
+              eye_list = white_wall_with_eye.get(wall_id)
+              if eye_list is None:
+                new_eye_list = set()
+                new_eye_list.add((i,j))
+                white_wall_with_eye[wall_id] = new_eye_list
+                # print('# after adding first eye:' + str(white_wall_with_eye[wall_id]))
+              else:
+                eye_list.add((i,j))
+                white_wall_with_eye[wall_id] = eye_list
+                # print('# after adding new eye:' + str(white_wall_with_eye[wall_id]))
+
+    has_dead_wall = True
+    while has_dead_wall:
+      has_dead_wall = False
+      # print('# black wall with eye: ' + str(black_wall_with_eye))
+      # print('# black eye with wall: ' + str(black_eye_with_wall))
+      
+      wall_ids = black_wall_with_eye.keys()
+      for wall_id in wall_ids:
+        if not wall_id in permanent_black_wall:
+          cur_eyes = black_wall_with_eye.get(wall_id)
+          if not cur_eyes is None:
+            if len(cur_eyes) == 1:
+              target_eye = list(cur_eyes)[0]
+              remote_walls = black_eye_with_wall.get(target_eye)
+              if not remote_walls is None:
+                for wall_id in remote_walls:
+                  if wall_id in black_wall_with_eye.keys():
+                    del black_wall_with_eye[wall_id]
+              
+              if target_eye in black_eye_with_wall.keys():
+                del black_eye_with_wall[target_eye]
+
+              has_dead_wall = True
+
+    for true_eye in black_eye_with_wall.keys():
+      (row, col) = true_eye
+      self.black_eye_state[cur_move_number][row][col] = 1
+
+    has_dead_wall = True
+    while has_dead_wall:
+      has_dead_wall = False
+      # print('# black wall with eye: ' + str(black_wall_with_eye))
+      # print('# black eye with wall: ' + str(black_eye_with_wall))
+      
+      wall_ids = white_wall_with_eye.keys()
+      for wall_id in wall_ids:
+        if not wall_id in permanent_white_wall:
+          cur_eyes = white_wall_with_eye.get(wall_id)
+          if not cur_eyes is None:
+            if len(cur_eyes) == 1:
+              target_eye = list(cur_eyes)[0]
+              remote_walls = white_eye_with_wall.get(target_eye)
+              if not remote_walls is None:
+                for wall_id in remote_walls:
+                  if wall_id in white_wall_with_eye.keys():
+                    del white_wall_with_eye[wall_id]
+              
+              if target_eye in white_eye_with_wall.keys():
+                del white_eye_with_wall[target_eye]
+
+              has_dead_wall = True
+
+    for true_eye in white_eye_with_wall.keys():
+      (row, col) = true_eye
+      self.white_eye_state[cur_move_number][row][col] = 1
+
+      
+
+
+    #       eye_type = self.get_eye_type(cur_move_number, i, j, 1)
+    #       if eye_type == 1:
+    #         self.black_eye_state[cur_move_number][i][j] = 1
+    #       elif eye_type == 2:
+    #         self.black_eye_state[cur_move_number][i][j] = 2
+    #         self.potential_black_eyes.add((i,j))
     
-    for potential_location in self.potential_white_eyes:
-      self.check_potential_location(cur_move_number, potential_location, 2)
+    # for potential_location in self.potential_black_eyes:
+    #   self.check_potential_location(cur_move_number, potential_location, 1)
+
+    # for i in range(self.board_size):
+    #   for j in range(self.board_size):
+    #     if self.is_eye(cur_move_number, i, j, 2):
+    #       eye_type = self.get_eye_type(cur_move_number, i, j, 2)
+    #       if eye_type == 1:
+    #         self.white_eye_state[cur_move_number][i][j] = 1
+    #       elif eye_type == 2:
+    #         self.white_eye_state[cur_move_number][i][j] = 2
+    #         self.potential_white_eyes.add((i,j))
+    
+    # for potential_location in self.potential_white_eyes:
+    #   self.check_potential_location(cur_move_number, potential_location, 2)
             
           
   def is_eye(self, cur_move_number, row, col, color_value):
@@ -332,6 +379,68 @@ class ArrayGoBoard(object):
         return False
     # print('# it is a eye')
     return True
+
+  def wall_review(self, cur_move_number, row, col, color_value):
+    cur_index = self.get_next_wall_mark_index()
+    self.mark_the_wall(cur_move_number, row+1, col, color_value, cur_index)
+
+    cur_index = self.get_next_wall_mark_index()
+    self.mark_the_wall(cur_move_number, row, col+1, color_value, cur_index)
+
+    cur_index = self.get_next_wall_mark_index()
+    self.mark_the_wall(cur_move_number, row-1, col, color_value, cur_index)
+
+    cur_index = self.get_next_wall_mark_index()
+    self.mark_the_wall(cur_move_number, row, col-1, color_value, cur_index)
+    
+  def mark_the_wall(self, cur_move_number, row, col, color_value, cur_index):
+    if row < 0 or col < 0 or row >= self.board_size or col >= self.board_size:
+      # out of board, return
+      return
+
+    if self.wall_mark[cur_move_number][row][col] != 0:
+      # this stone has been marked, we couldn't overrite it, return
+      return
+    
+    if self.board[cur_move_number][row][col] == color_value:
+      self.wall_mark[cur_move_number][row][col] = cur_index
+
+      self.mark_the_wall(cur_move_number, row+1, col, color_value, cur_index)
+
+      self.mark_the_wall(cur_move_number, row, col+1, color_value, cur_index)
+
+      self.mark_the_wall(cur_move_number, row-1, col, color_value, cur_index)
+
+      self.mark_the_wall(cur_move_number, row, col-1, color_value, cur_index)
+
+  def get_wall(self, cur_move_number, row, col, color_value):
+    result = set()
+
+    wall_item = self.get_wall_item(cur_move_number, row+1, col, color_value)
+    if not wall_item is None:
+      result.add(wall_item)
+
+    wall_item = self.get_wall_item(cur_move_number, row, col+1, color_value)
+    if not wall_item is None:
+      result.add(wall_item)
+
+    wall_item = self.get_wall_item(cur_move_number, row-1, col, color_value)
+    if not wall_item is None:
+      result.add(wall_item)
+
+    wall_item = self.get_wall_item(cur_move_number, row, col-1, color_value)
+    if not wall_item is None:
+      result.add(wall_item)
+
+    return list(result)
+
+  def get_wall_item(self, cur_move_number, row, col, color_value):
+    if row < 0 or col < 0 or row >= self.board_size or col >= self.board_size:
+      # out of board, return
+      return None
+
+    return self.wall_mark[cur_move_number][row][col]
+     
   
   def get_eye_type(self, cur_move_number, row, col, color_value):
     # detect the type of eye: 0: false eye, 1: true eye, 2: potential true eye
@@ -515,7 +624,67 @@ class ArrayGoBoard(object):
         return True
 
 
+  def is_my_eye(self, color, pos):
+    color_value = self.get_color_value(color)
+    return self.is_simple_true_eye(color_value, pos)
 
+  def is_simple_true_eye(self, color_value, pos):
+    (row, col) = pos
+    if color_value == 1:
+      if self.black_eye_state[self.move_number][row][col] == 1:
+        return True
+    elif color_value == 2:
+      if self.white_eye_state[self.move_number][row][col] == 1:
+        return True
+    return False
+      
+  # if current position is empty, not a ko and not suicide, it is legal
+  def is_move_legal(self, color, pos):
+    # apply move to position
+    # print('# applying move: ' + color + "  " + str(pos))
+    last_move_number = self.move_number
+    cur_move_number = self.move_number + 1
+
+    if cur_move_number >= self.history_length:
+      # this board has more than 1024 moves, it is full, just return False
+      return False
+
+    (row, col) = pos
+    color_value = self.get_color_value(color)
+    enemy_color_value = self.get_enemy_color_value(color)
+
+    if self.board[last_move_number][row][col] != 0:
+      # current point is not empty, it is illegal, return False
+      return False
+    
+    if self.potential_ko:
+      # if last move is a potential ko move
+      if color_value != self.move_history_color_value[last_move_number]:
+        # last move is played by enemy
+        if self.ko_remove == pos:
+          # it is a Ko, it is illegal, return False
+          return False
+
+    # copy last state to current state, for suicide checking
+    self.board[cur_move_number] = self.board[last_move_number]
+
+    self.board[cur_move_number][row][col] = color_value
+
+    up_removed = self.remove_if_dead(cur_move_number, row+1, col)
+    right_removed = self.remove_if_dead(cur_move_number, row, col+1)
+    down_removed = self.remove_if_dead(cur_move_number, row-1, col)
+    left_removed = self.remove_if_dead(cur_move_number, row, col-1)
+
+    if not (up_removed > 0 or right_removed >0 or down_removed > 0 or left_removed > 0):
+      suicide_number = self.remove_if_dead(cur_move_number, row, col)
+      if suicide_number > 0:
+        # it is suicide, return False
+        return False
+
+    #make sure that we didn't update the self.move_number here, as it is a simulation for legal checking
+
+    # it is not empty, it is not a ko, and it it not suicide either, it is legal
+    return True
 
 
   def reset_review_record(self):
@@ -666,8 +835,10 @@ class ArrayGoBoard(object):
   def __str__(self):
     result = ''
     # result = result + self.get_standard_debug_string()
+    result = result + self.get_wall_mark_debug_string()
     result = result + self.get_eye_debug_string()
     # result = result + self.get_history_debug_string()
+    
     return result
 
   def get_standard_debug_string(self):
@@ -731,7 +902,23 @@ class ArrayGoBoard(object):
     
     return result
 
- 
+  def get_wall_mark_debug_string(self):
+    result = '# ArrayGoBoard, wall mark:\n'
+    
+    if self.move_number < 1:
+      result = result + 'No wall mark records now.'
+    else:
+      for i in range(self.board_size - 1, -1, -1):
+          line = '# '
+          for j in range(0, self.board_size):
+                line = line + str(self.wall_mark[self.move_number][i][j])
+
+          result = result + line + '\n'
+
+    
+    
+    return result
+
 
 
 
