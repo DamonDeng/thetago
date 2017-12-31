@@ -1,27 +1,31 @@
 import mxnet as mx
 
 def getSymbol():
-  num_classes = 361
+  num_classes = 362
+  bn_mom=0.9
 
   data = mx.symbol.Variable('data')
-  # first conv layer
-  conv1 = mx.sym.Convolution(data=data, kernel=(7,7), num_filter=48)
-  tanh1 = mx.sym.Activation(data=conv1, act_type="relu")
-  # pool1 = mx.sym.Pooling(data=tanh1, pool_type="max", kernel=(2,2), stride=(2,2))
-  # second conv layer
-  conv2 = mx.sym.Convolution(data=tanh1, kernel=(5,5), num_filter=32)
-  tanh2 = mx.sym.Activation(data=conv2, act_type="relu")
-  # pool2 = mx.sym.Pooling(data=tanh2, pool_type="max", kernel=(2,2), stride=(2,2))
-  # first fullc layer
-  conv3 = mx.sym.Convolution(data=tanh2, kernel=(5,5), num_filter=32)
-  tanh3 = mx.sym.Activation(data=conv3, act_type="relu")
+  conv1 = mx.sym.Convolution(data=data, kernel=(3,3), num_filter=256, pad = (1,1))
+  bn1 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom)
+  acti1 = mx.sym.Activation(data=bn1, act_type="relu")
   
-  flatten = mx.sym.Flatten(data=tanh3)
+  res_net = acti1
+  # for i in range(2):
+  #   res_conv1 = mx.sym.Convolution(data=res_net, kernel=(3,3), num_filter=256, pad = (1,1))
+  #   res_bn1 = mx.sym.BatchNorm(data=res_conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom)
+  #   res_acti1 = mx.sym.Activation(data=res_bn1, act_type="relu")
+    
+  #   res_conv2 = mx.sym.Convolution(data=res_acti1, kernel=(3,3), num_filter=256, pad = (1,1))
+  #   res_bn2 = mx.sym.BatchNorm(data=res_conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom)
+  #   res_acti2 = mx.sym.Activation(data=res_bn2, act_type="relu")
+
+  #   temp_result = res_net + res_acti2
+  #   res_net = temp_result
+  
+  flatten = mx.sym.Flatten(data=res_net)
   fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=512)
   tanh3 = mx.sym.Activation(data=fc1, act_type="tanh")
-  # second fullc
-  fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=361)
-  # softmax loss
-  cnn_net = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
+  fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=num_classes)
+  final_net = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 
-  return cnn_net
+  return final_net
