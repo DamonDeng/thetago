@@ -53,21 +53,26 @@ def start_training(args):
   print('using processor: ' + str(processor))
 
   learner_bot = MXNetRobot(model_prefix, model_epoche, processor)
-  teacher_bot = MXNetRobot(model_prefix, model_epoche, processor)
+  # teacher_bot = MXNetRobot(model_prefix, model_epoche, processor)
 
   print('starting to play')
   time_start=time.time()
-  for i in range(400):
-    print('.'),
-    position1 = learner_bot.select_move('b')
-    if position1 is not None:
-      teacher_bot.apply_move('b', position1)
-    position2 = teacher_bot.select_move('w')
-    if position2 is not None:
-      learner_bot.apply_move('w', position2)
 
-    if position1 is None and position2 is None:
-      break
+  # learner_bot.simulate_to_end()
+  for i in range(10):
+    learner_bot.random_simulate_to_end()
+
+  # for i in range(400):
+  #   print('.'),
+  #   position1 = learner_bot.select_move('b')
+  #   if position1 is not None:
+  #     teacher_bot.apply_move('b', position1)
+  #   position2 = teacher_bot.select_move('w')
+  #   if position2 is not None:
+  #     learner_bot.apply_move('w', position2)
+
+  #   if position1 is None and position2 is None:
+  #     break
   
   time_end=time.time()
 

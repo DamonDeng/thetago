@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import random
 
 
 class ArrayGoBoard(object):
@@ -13,7 +14,7 @@ class ArrayGoBoard(object):
     self.history_length = 1024
     self.move_number = 0
     self.is_simulating = False
-    self.simulate_move_number = 0
+    self.real_move_number = 0
 
     self.board = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
     self.black_history = np.zeros((self.history_length, self.board_size, self.board_size), dtype=int)
@@ -630,6 +631,9 @@ class ArrayGoBoard(object):
 
 
   def is_my_eye(self, color, pos):
+    if not self.eye_checking:
+      return False
+
     if pos is None:
       return False
     color_value = self.get_color_value(color)
@@ -720,7 +724,16 @@ class ArrayGoBoard(object):
         return False
 
       
-  
+  def get_cur_move_color(self):
+    if self.move_number == 0:
+      return 'b'
+    else:
+      if self.move_history_color_value == 1:
+        return 'w'
+      elif self.move_history_color_value == 2:
+        return 'b'
+      else:
+        return 'e' # error
 
   # convert the color letter to color value
   def get_color_value(self, color):
@@ -793,30 +806,31 @@ class ArrayGoBoard(object):
     result = self.board[self.move_number]
     return result
 
-  def get_empty_space(self):
-    return self.get_empty_space_at(self.move_number)
+  def get_legal_empty_space(self, color):
+    return self.get_legal_empty_space_at(self.move_number, color)
 
-  def get_empty_space_at(self, cur_move_number):
+  def get_legal_empty_space_at(self, cur_move_number, color):
     result = list()
     if cur_move_number >= self.history_length:
       return result
     for i in range(self.board_size):
       for j in range(self.board_size):
         if self.board[cur_move_number][i][j] == 0:
-          result.append((i, j))
+          # if self.is_move_legal(color, (i, j)):
+            result.append((i, j))
     return result
 
-  def random_simulate_to_end(self):
-    simulate_move_number = self.move_number + 1
-    if simulate_move_number >= self.history_length:
-      return (0, 0)
+  def get_random_next(self, color):
+    empty_locations = self.get_legal_empty_space(color)
 
-    last_move_color_value = self.move_history_color_value
-    self.board[simulate_move_number] = self.board[self.move_number]
+    if len(empty_locations) < 1:
+      return None
 
-    empty_space = self.get_empty_space_at(simulate_move_number)
+    empty_number = len(empty_locations)
 
+    random_number = random.randint(0, empty_number-1)
 
+    return empty_locations[random_number]
 
 
   def get_move_array(self, history_length, color):
@@ -824,17 +838,19 @@ class ArrayGoBoard(object):
     color_value = self.get_color_value(color)
 
     for i in range(history_length):
-      cur_point = self.move_number - i
+      # Notice: now the result is: 
+      # ( y(t-history_length-1), x(t-history_length-1),,y(t-1),x(t-1),yt, xt, c)
+      cur_point = self.move_number - (history_length - 1 - i) 
       if cur_point < 0:
         result[i*2] = self.zero_array
         result[i*2 + 1] = self.zero_array
       else:
         if color_value == 1:
-          result[i*2] = self.black_history[cur_point]
-          result[i*2 + 1] = self.white_history[cur_point]
-        elif color_value == 2:
           result[i*2] = self.white_history[cur_point]
           result[i*2 + 1] = self.black_history[cur_point]
+        elif color_value == 2:
+          result[i*2] = self.black_history[cur_point]
+          result[i*2 + 1] = self.white_history[cur_point]
 
     if color_value == 1:
       result[-1] = self.one_array
@@ -842,6 +858,39 @@ class ArrayGoBoard(object):
       result[-1] = self.zero_array
 
     return result
+
+  # def get_move_array(self, history_length, color):
+  #   result = np.zeros((history_length*2+1, self.board_size, self.board_size), dtype=int)
+  #   color_value = self.get_color_value(color)
+
+  #   for i in range(history_length):
+  #     cur_point = self.move_number - i
+  #     if cur_point < 0:
+  #       result[i*2] = self.zero_array
+  #       result[i*2 + 1] = self.zero_array
+  #     else:
+  #       if color_value == 1:
+  #         result[i*2] = self.black_history[cur_point]
+  #         result[i*2 + 1] = self.white_history[cur_point]
+  #       elif color_value == 2:
+  #         result[i*2] = self.white_history[cur_point]
+  #         result[i*2 + 1] = self.black_history[cur_point]
+
+  #   if color_value == 1:
+  #     result[-1] = self.one_array
+  #   elif color_value == 2:
+  #     result[-1] = self.zero_array
+
+  #   return result
+
+  def start_simulating(self):
+    self.is_simulating = True
+    self.real_move_number = self.move_number
+
+  def stop_simulating(self):
+    self.move_number = self.real_move_number
+    self.is_simulating = False
+
 
   # debuging function: return string representing current board
   ##############################

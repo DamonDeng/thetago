@@ -30,7 +30,7 @@ class MXNetRobot:
       value_mod.set_params(value_arg_params, value_aux_params, allow_missing=True)
       self.value_model = value_mod
     
-    self.go_board = ArrayGoBoard(self.board_size, eye_checking=True)
+    self.go_board = ArrayGoBoard(self.board_size, eye_checking=False)
     # self.space_manager = SpaceManager(19)
     # print (self.space_manager)
     self.processor_class = processor_class
@@ -62,9 +62,50 @@ class MXNetRobot:
 
     return position_list
 
+  def simulate_to_end(self):
+    self.go_board.start_simulating()
+
+    cur_move_result = (-1, -1)
+    enemy_move_result = (-1, -1)
+
+    cur_move_color = self.go_board.get_cur_move_color()
+    enemy_move_color = self.go_board.other_color(cur_move_color)
+
+    while cur_move_result is not None and enemy_move_result is not None:
+      cur_move_result = self.select_move(cur_move_color)
+      enemy_move_result = self.select_move(enemy_move_color)
+
+    self.go_board.stop_simulating()
+
+  def random_simulate_to_end(self):
+    self.go_board.start_simulating()
+
+    cur_move_result = (-1, -1)
+    enemy_move_result = (-1, -1)
+
+    cur_move_color = self.go_board.get_cur_move_color()
+    enemy_move_color = self.go_board.other_color(cur_move_color)
+
+    total_number = 0
+
+    while cur_move_result is not None and enemy_move_result is not None and total_number < 400:
+      total_number = total_number + 1
+      cur_move_result = self.go_board.get_random_next(cur_move_color)
+      if cur_move_result is not None:
+        self.apply_move(cur_move_color, cur_move_result)
+
+      enemy_move_result = self.go_board.get_random_next(enemy_move_color)
+      if enemy_move_result is not None:
+        self.apply_move( enemy_move_color, enemy_move_result)
+
+    print('# simulate move number: ' + str(self.go_board.move_number))
+
+    self.go_board.stop_simulating()
+
+
   def select_move(self, color):
 
-    # we should modify this part of code to make it auto
+    
     data,label = self.processor_class.feature_and_label(color, (0,0), self.go_board)
 
     (input_data_label, input_data_shape) = self.processor_class.get_single_data_shape()[0]
@@ -166,27 +207,27 @@ class MXNetRobot:
     # self.space_manager.apply_move(color, move)
     # print (self.go_board)
 
-    if self.value_model is not None:
-      # trying to compute the evaluation value of current board
-      value_input_data = np.zeros((1,7,19,19))  
+    # if self.value_model is not None:
+    #   # trying to compute the evaluation value of current board
+    #   value_input_data = np.zeros((1,7,19,19))  
 
-      value_data, value_label = self.value_processor_class.feature_and_label(color, None, self.go_board)
-      value_input_data[0] = value_data
+    #   value_data, value_label = self.value_processor_class.feature_and_label(color, None, self.go_board)
+    #   value_input_data[0] = value_data
       
-      value_data_iter = mx.io.NDArrayIter(value_input_data)
-      value_output = self.value_model.predict(value_data_iter).asnumpy()
+    #   value_data_iter = mx.io.NDArrayIter(value_input_data)
+    #   value_output = self.value_model.predict(value_data_iter).asnumpy()
 
-      print ("# after applying move, value of "+color+" is:" + str(value_output[0]))
+    #   print ("# after applying move, value of "+color+" is:" + str(value_output[0]))
 
-      enemy_color = self.go_board.other_color(color)
+    #   enemy_color = self.go_board.other_color(color)
 
-      value_data, value_label = self.value_processor_class.feature_and_label(enemy_color, None, self.go_board)
-      value_input_data[0] = value_data
+    #   value_data, value_label = self.value_processor_class.feature_and_label(enemy_color, None, self.go_board)
+    #   value_input_data[0] = value_data
       
-      value_data_iter = mx.io.NDArrayIter(value_input_data)
-      value_output = self.value_model.predict(value_data_iter).asnumpy()
+    #   value_data_iter = mx.io.NDArrayIter(value_input_data)
+    #   value_output = self.value_model.predict(value_data_iter).asnumpy()
 
-      print ("# after applying move, value of "+enemy_color+" is:" + str(value_output[0]))
+    #   print ("# after applying move, value of "+enemy_color+" is:" + str(value_output[0]))
 
 
       
