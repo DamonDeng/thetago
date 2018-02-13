@@ -10,7 +10,7 @@ def getSymbol():
   acti1 = mx.sym.Activation(data=bn1, act_type="relu")
   
   res_net = acti1
-  for i in range(8):
+  for i in range(19):
     res_conv1 = mx.sym.Convolution(data=res_net, kernel=(3,3), num_filter=256, pad = (1,1))
     res_bn1 = mx.sym.BatchNorm(data=res_conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom)
     res_acti1 = mx.sym.Activation(data=res_bn1, act_type="relu")

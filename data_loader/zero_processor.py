@@ -126,16 +126,15 @@ class ZeroProcessor(object):
 
         # print('calling feature and label from seven pane processer')
 
-        # history_length = 8
+        history_length = 8
 
-        history_length = 2
+        # history_length = 2
 
         if move == None:
           label = 361
         else:
           row, col = move
           label = row * 19 + col
-
         
         move_array = go_board.get_move_array(history_length, color)
 
