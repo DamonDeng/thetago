@@ -39,7 +39,7 @@ class ZeroProcessor(object):
     def get_data_shape_only(cls, batch_size):
       board_col = 19
       board_row = 19
-      return (batch_size, 5, board_row, board_col)
+      return (batch_size, 17, board_row, board_col)
 
     @classmethod
     def get_label_shape_only(cls, batch_size):
@@ -55,7 +55,7 @@ class ZeroProcessor(object):
     def get_single_data_shape(cls):
       board_col = 19
       board_row = 19
-      return [('data',(1, 5, board_row, board_col))]
+      return [('data',(1, 17, board_row, board_col))]
 
     @classmethod
     def get_label_shape(cls, batch_size):
