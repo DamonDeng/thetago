@@ -2,7 +2,7 @@
 
 
 python ./mxnet_dualres_training.py train \
---data data/
+--data data/ \
 --network network.dual_resnet \
 --prefix checkpoint/thetago_dual_res_17L_19res \
 --epoche 100 \

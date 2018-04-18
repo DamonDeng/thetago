@@ -85,15 +85,15 @@ def start_training(args):
     print('started to train....')
 
 
-    print('debug display for iter:')
-    temp_iter = data_iter.next()
+    # print('debug display for iter:')
+    # temp_iter = data_iter.next()
 
-    print ('iter:' + str(temp_iter))
+    # print ('iter:' + str(temp_iter))
 
-    print ('end of debug displaying')
+    # print ('end of debug displaying')
 
-    print ('the label is:')
-    print (temp_iter.label)
+    # print ('the label is:')
+    # print (temp_iter.label)
 
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
