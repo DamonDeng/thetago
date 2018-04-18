@@ -31,6 +31,8 @@ def start_training(args):
     
   else:
     devices = mx.cpu(0)
+
+  print('Using devices:' + str(devices))
   
 
   net = _load_network_by_name(network_name)
