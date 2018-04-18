@@ -163,7 +163,7 @@ def _prepare_training_data_single_process(inter_file_list, processor_class, outp
   # Make sure ^C gets handled in the main process.
   _disable_keyboard_interrupt()
 
-  print('starting to run in the single process')
+#   print('starting to run in the single process')
 
   for file_name in inter_file_list:
 
@@ -184,8 +184,8 @@ def _prepare_training_data_single_process(inter_file_list, processor_class, outp
                 if not stop_q.empty():
                     print("Got stop signal, aborting.")
                     return
-        else:
-            print ('file which is not sgf file:' + name)
+        # else:
+        #     print ('file which is not sgf file:' + name)
   
 
 def _disable_keyboard_interrupt():
