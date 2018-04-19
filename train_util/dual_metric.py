@@ -1,12 +1,12 @@
 import mxnet as mx
-import numpy as numpy
+import numpy as np
 
 class DualMetricCE(mx.metric.EvalMetric): 
     def __init__(self, num=None):
         super(DualMetricCE, self).__init__('Dual_CE', num)
 
     def update(self, labels, preds):
-        labels, preds = mx.metric.check_label_shapes(labels, preds, True)
+        # labels, preds = mx.metric.check_label_shapes(labels, preds, True)
 
         
 
@@ -37,7 +37,7 @@ class DualMetricCE(mx.metric.EvalMetric):
 
             prob = pred[label[0]]
 
-            self.sum_metric += (-numpy.log(prob + 0.0000000001))
+            self.sum_metric += (-np.log(prob + 0.0000000001))
             self.num_inst += 1
 
 
@@ -46,16 +46,16 @@ class DualMetricMSE(mx.metric.EvalMetric):
         super(DualMetricMSE, self).__init__('Dual_MSE', num)
 
     def update(self, labels, preds):
-        labels, preds = mx.metric.check_label_shapes(labels, preds, True)
+        # labels, preds = mx.metric.check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels[1], preds[1]):
             label = label.asnumpy()
             pred = pred.asnumpy()
 
-            if len(label.shape) == 1:
-                label = label.reshape(label.shape[0], 1)
-            if len(pred.shape) == 1:
-                pred = pred.reshape(pred.shape[0], 1)
+            # if len(label.shape) == 1:
+            #     label = label.reshape(label.shape[0], 1)
+            # if len(pred.shape) == 1:
+            #     pred = pred.reshape(pred.shape[0], 1)
 
             self.sum_metric += ((label - pred)**2.0).mean()
             self.num_inst += 1 # numpy.prod(label.shape)
