@@ -7,7 +7,7 @@ python ./mxnet_dualres_training.py train \
 --prefix checkpoint/thetago_dual_res \
 --epoche 100 \
 --learningrate 0.1 \
---batchsize 3 \
+--batchsize 4 \
 --evalmetric mse \
 --processor ZeroDualResProcessor
 

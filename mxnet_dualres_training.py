@@ -97,9 +97,17 @@ def start_training(args):
     # print ('the label is:')
     # print (temp_iter.label)
 
+    eval_metrics = mx.metric.CompositeEvalMetric()
+
+    eval_metrics_1 = DualMetricCE()
+    eval_metrics_2 = DualMetricMSE()
+
+    eval_metrics.add(eval_metrics_1)
+    eval_metrics.add(eval_metrics_2)
+
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
-            eval_metric=args.evalmetric,
+            eval_metric=eval_metrics,
             optimizer=args.optimizer,
             optimizer_params=(('learning_rate', args.learningrate),),
             batch_end_callback=mx.callback.Speedometer(32, 20),
@@ -147,7 +155,7 @@ def main():
     train_parser.add_argument('--data', '-i', required=True, help='Data directory.')
     train_parser.add_argument('--network', '-n', required=True, help='Network to use.')
     train_parser.add_argument('--prefix', '-p', required=True, help='prefix of checkpoint.')
-    train_parser.add_argument('--devices', '-d', default="cpu", help='prefix of checkpoint.')
+    train_parser.add_argument('--devices', '-d', default="cpu", help='type of device.')
     train_parser.add_argument('--optimizer', '-o', default="sgd", help='optimizer short name')
     train_parser.add_argument('--epoche', '-e', type=int, default=100, help='Number of epoche')
     train_parser.add_argument('--batchsize', '-b', type=int, default=512, help='Batch size')

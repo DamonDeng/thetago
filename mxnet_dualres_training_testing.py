@@ -9,6 +9,8 @@ from data_loader.value_processor import ValueProcessor
 from data_loader.zero_processor import ZeroProcessor
 from data_loader.zero_dualres_processor import ZeroDualResProcessor
 
+from dual_metric import DualMetricCE, DualMetricMSE
+
 from sys import argv
 import sys
 import importlib
@@ -29,17 +31,17 @@ def getSymbol():
   acti1 = mx.sym.Activation(data=bn1, act_type="relu")
   
   res_net = acti1
-  for i in range(19):
-    res_conv1 = mx.sym.Convolution(data=res_net, kernel=(3,3), num_filter=256, pad = (1,1))
-    res_bn1 = mx.sym.BatchNorm(data=res_conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom)
-    res_acti1 = mx.sym.Activation(data=res_bn1, act_type="relu")
+#   for i in range(19):
+#     res_conv1 = mx.sym.Convolution(data=res_net, kernel=(3,3), num_filter=256, pad = (1,1))
+#     res_bn1 = mx.sym.BatchNorm(data=res_conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom)
+#     res_acti1 = mx.sym.Activation(data=res_bn1, act_type="relu")
     
-    res_conv2 = mx.sym.Convolution(data=res_acti1, kernel=(3,3), num_filter=256, pad = (1,1))
-    res_bn2 = mx.sym.BatchNorm(data=res_conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom)
-    res_acti2 = mx.sym.Activation(data=res_bn2, act_type="relu")
+#     res_conv2 = mx.sym.Convolution(data=res_acti1, kernel=(3,3), num_filter=256, pad = (1,1))
+#     res_bn2 = mx.sym.BatchNorm(data=res_conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom)
+#     res_acti2 = mx.sym.Activation(data=res_bn2, act_type="relu")
 
-    temp_result = res_net + res_acti2
-    res_net = temp_result
+#     temp_result = res_net + res_acti2
+#     res_net = temp_result
 
   policy_conv = mx.sym.Convolution(data=res_net, kernel=(1,1), num_filter=2)
   policy_bn = mx.sym.BatchNorm(data=policy_conv, fix_gamma=False, eps=2e-5, momentum=bn_mom)
@@ -65,13 +67,11 @@ def getSymbol():
 
 
 class SimpleIter(mx.io.DataIter):
-    def __init__(self, data_names, data_shapes, data_gen,
-                 label_names, label_shapes, label_gen, num_batches=10):
-        self._provide_data = list(zip(data_names, data_shapes))
-        self._provide_label = list(zip(label_names, label_shapes))
+    def __init__(self, batch_size=30, num_batches=10):
+        self._provide_data = [('data', (batch_size, 17, 19, 19))]
+        self._provide_label = [('move_label', (batch_size,)), ('value_label', (batch_size,))]
+        self.batch_size = batch_size
         self.num_batches = num_batches
-        self.data_gen = data_gen
-        self.label_gen = label_gen
         self.cur_batch = 0
 
     def __iter__(self):
@@ -96,8 +96,15 @@ class SimpleIter(mx.io.DataIter):
 #         print (temp[1])
         if self.cur_batch < self.num_batches:
             self.cur_batch += 1
-            data = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_data, self.data_gen)]
-            label = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_label, self.label_gen)]
+
+            data = [mx.nd.array(np.random.rand(100, 17, 19, 19))]
+            go_move_label = mx.nd.array(np.random.randint(0, 361, 100))
+            go_value_label = mx.nd.array(np.random.rand(100,)*2-1)
+
+            label = [go_move_label, go_value_label]
+
+            # data = np.random.randint()
+            # label = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_label, self.label_gen)]
             # print('label inside the generator:')
             # print(label)
             # print('item 0:')
@@ -156,22 +163,29 @@ def start_training(args):
 
   workers = cpu_count()
   print('using '+ str(workers) + " workers to load the SGF data")
+
+
   data_iter = MultiThreadDualSGFIter(sgf_directory=data_dir, 
                                 workers=workers, 
                                 batch_size=args.batchsize, 
                                 file_limit = args.filelimit, 
                                 processor_class=processor, 
                                 level_limit=args.levellimit)
+
+
   #data_iter = SimulatorIter( batch_size=1024)
   #data_iter = SimulatorIter(batch_size=1024, num_batches=1024)
 
 
-  # n = 32
-  # num_classes = 362
-  # data_iter = SimpleIter(['data'], [(n, 17, 19, 19)],
-  #                 [lambda s: np.random.uniform(-1, 1, s)],
-  #                 ['move_label', 'value_label'], [(n, num_classes), (n,)],
-  #                 [lambda s: np.random.randint(0, 3, s), lambda s: np.random.randint(0, 3, s)])
+#   n = 32
+#   num_classes = 362
+#   data_iter = SimpleIter(batch_size=args.batchsize)
+
+#   go_data = np.random.rand(100, 17, 19, 19)
+#   go_move_label = np.random.randint(0, 362, 100)
+#   go_value_label = np.random.rand(100,)*2-1
+
+#   data_iter = mx.io.NDArrayIter(go_data, label={'move_label':go_move_label, 'value_label':go_value_label}, batch_size=30)
  
   print (str(data_iter.provide_data))
   print (str(data_iter.provide_label))
@@ -203,9 +217,18 @@ def start_training(args):
     # print ('the label is:')
     # print (temp_iter.label)
 
+    eval_metrics = mx.metric.CompositeEvalMetric()
+
+    eval_metrics_1 = DualMetricCE()
+    eval_metrics_2 = DualMetricMSE()
+
+    eval_metrics.add(eval_metrics_1)
+    eval_metrics.add(eval_metrics_2)
+    
+
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
-            eval_metric=args.evalmetric,
+            eval_metric=eval_metrics,
             optimizer=args.optimizer,
             optimizer_params=(('learning_rate', args.learningrate),),
             batch_end_callback=mx.callback.Speedometer(32, 20),

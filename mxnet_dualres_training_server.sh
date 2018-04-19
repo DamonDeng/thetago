@@ -9,9 +9,9 @@ python ./mxnet_dualres_training.py train \
 --learningrate 0.1 \
 --batchsize 256 \
 --evalmetric mse \
---processor ZeroDualResProcessor
---devices gpu
---gpunumber 1
+--processor ZeroDualResProcessor \
+--devices gpu \
+--gpunumber 8
 
 
 

@@ -45,7 +45,7 @@ class ZeroDualResProcessor(object):
 
     @classmethod
     def get_label_shape_only(cls, batch_size):
-      return [(batch_size, 362), (batch_size, )]
+      return [(batch_size, ), (batch_size, )]
 
     @classmethod
     def get_data_shape(cls, batch_size):
@@ -61,7 +61,7 @@ class ZeroDualResProcessor(object):
 
     @classmethod
     def get_label_shape(cls, batch_size):
-      return [('move_label', (batch_size, 362)), ('value_label', (batch_size, ))]
+      return [('move_label', (batch_size, )), ('value_label', (batch_size, ))]
 
 
     def get_generator(self):
