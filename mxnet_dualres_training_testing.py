@@ -9,7 +9,7 @@ from data_loader.value_processor import ValueProcessor
 from data_loader.zero_processor import ZeroProcessor
 from data_loader.zero_dualres_processor import ZeroDualResProcessor
 
-from dual_metric import DualMetricCE, DualMetricMSE
+from train_util.dual_metric import DualMetricCE, DualMetricMSE
 
 from sys import argv
 import sys
