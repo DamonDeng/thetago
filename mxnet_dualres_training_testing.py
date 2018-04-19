@@ -138,9 +138,9 @@ def start_training(args):
     devices = mx.cpu(0)
   
 
-  # net = _load_network_by_name(network_name)
+  net = _load_network_by_name(network_name)
 
-  net = getSymbol()
+#   net = getSymbol()
 
   logging.basicConfig(level=logging.INFO)
   
