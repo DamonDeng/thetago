@@ -38,9 +38,9 @@ def getSymbol():
   value_acti2 = mx.sym.Activation(data=value_fc1, act_type='relu')
   value_fc2 = mx.sym.FullyConnected(data=value_acti2, num_hidden=1)
 
-  value_acti2 = mx.sym.Activation(data=value_fc2, act_type="tanh")
+  value_acti3 = mx.sym.Activation(data=value_fc2, act_type="tanh")
 
-  value_output = mx.sym.LinearRegressionOutput(data=value_acti2, label=value_label)
+  value_output = mx.sym.LinearRegressionOutput(data=value_acti3, label=value_label)
 
   final_net = mx.symbol.Group([policy_output, value_output])
 

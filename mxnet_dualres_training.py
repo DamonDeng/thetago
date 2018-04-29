@@ -89,15 +89,17 @@ def start_training(args):
     print('started to train....')
 
 
-    # print('debug display for iter:')
-    # temp_iter = data_iter.next()
+    # for temp_data in data_iter:
+    #   # a = temp_data
+    #   print('debug display for iter:-----------------')
+    #   # temp_iter = data_iter.next()
 
-    # print ('iter:' + str(temp_iter))
+    #   # print ('iter:' + str(temp_data))
 
-    # print ('end of debug displaying')
+    #   # print ('end of debug displaying')
 
-    # print ('the label is:')
-    # print (temp_iter.label)
+    #   print ('the label is:')
+    #   print (temp_data.label)
 
     eval_metrics = mx.metric.CompositeEvalMetric()
 
@@ -114,6 +116,8 @@ def start_training(args):
             optimizer_params=(('learning_rate', args.learningrate),),
             batch_end_callback=mx.callback.Speedometer(32, 20),
             epoch_end_callback=mx.callback.do_checkpoint(prefix))
+
+
   finally:
     data_iter.stop_task()
 

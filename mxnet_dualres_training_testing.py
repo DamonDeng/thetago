@@ -226,6 +226,9 @@ def start_training(args):
     eval_metrics.add(eval_metrics_2)
     
 
+    # for temp in data_iter:
+    #     print('get one batch')
+
     mod.fit(data_iter, 
             num_epoch=args.epoche, 
             eval_metric=eval_metrics,

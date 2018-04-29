@@ -816,7 +816,7 @@ class Sgf_game(object):
         target_level = 0
 
         if level_class == 'p':
-            target_level = level_number * 10
+            target_level = level_number * -1
         elif level_class == 'd':
             target_level = level_number
         else:
@@ -861,6 +861,38 @@ class Sgf_game(object):
         if colour not in ("b", "w"):
             return None
         return colour
+
+    def get_winner_result(self):
+        """Return the result of the winning player.
+
+        Returns None if there is no RE property, or if neither player won.
+
+        """
+        try:
+
+            # temp_result = self.root.get(b"RE").decode(self.presenter.encoding)[2:]
+            
+            # print('result:'),
+            # print(temp_result)
+
+            result = self.root.get(b"RE").decode(self.presenter.encoding)[2:].lower()
+
+
+        except LookupError:
+            return None
+        if result in ("time", "resign"):
+            return result
+
+        try:
+            result_value = float(result)
+        except ValueError:
+            print ('failed to convert the result to float:'),
+            print result
+            return None
+
+        return result_value
+
+    
 
     def set_date(self, date=None):
         """Set the DT property to a single date.

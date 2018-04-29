@@ -70,7 +70,30 @@ class ZeroDualResProcessor(object):
       if self.sgf.is_level_higher_than(self.level_limit):
 
         winner = self.sgf.get_winner()
+        handicap = self.sgf.get_handicap()
 
+        # print('handicap'),
+        # print(handicap)
+
+        if handicap is not None:
+          #only process the noral game
+          return
+
+        result = self.sgf.get_winner_result()
+
+        # if result is not None:
+        #   print ('result is:' + result)
+
+        if result is None:
+          return
+        else:
+          if not isinstance(result, float):
+            if not result == 'resign':
+              return
+          else:
+            print('result:'),
+            print(result)
+          
 
         for item in self.main_sequence_iter:
 
@@ -107,7 +130,7 @@ class ZeroDualResProcessor(object):
 
             if is_target:
               yield data, move_label, value_label
-          
+        
 
     
     @classmethod    
@@ -140,6 +163,8 @@ class ZeroDualResProcessor(object):
         
         move_array = go_board.get_move_array(history_length, color)
 
+        # print ('winner is: ' + winner)
+        # print ('color is:' + color)
 
         if winner is None:
           value_label = 0

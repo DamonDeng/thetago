@@ -30,10 +30,10 @@ class DualMetricCE(mx.metric.EvalMetric):
 
             # print ('label:')
             # print (label)
-            # print ('-------------------------')
+            # print ('!!!!!!!!!!!!!!!!!!!!!!!!!!')
             # print ('preds:')
             # print (pred)
-            # print ('----------------------------------------------')
+            # print ('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
             prob = pred[label[0]]
 
@@ -48,9 +48,17 @@ class DualMetricMSE(mx.metric.EvalMetric):
     def update(self, labels, preds):
         # labels, preds = mx.metric.check_label_shapes(labels, preds, True)
 
+
         for label, pred in zip(labels[1], preds[1]):
             label = label.asnumpy()
             pred = pred.asnumpy()
+
+            # print ('label:')
+            # print (label)
+            # print ('-------------------------')
+            # print ('preds:')
+            # print (pred)
+            # print ('----------------------------------------------')
 
             # if len(label.shape) == 1:
             #     label = label.reshape(label.shape[0], 1)
