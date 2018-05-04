@@ -90,9 +90,9 @@ class ZeroDualResProcessor(object):
           if not isinstance(result, float):
             if not result == 'resign':
               return
-          else:
-            print('result:'),
-            print(result)
+          # else:
+          #   print('result:'),
+          #   print(result)
           
 
         for item in self.main_sequence_iter:
