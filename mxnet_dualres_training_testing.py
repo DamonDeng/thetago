@@ -207,15 +207,27 @@ def start_training(args):
     print('started to train....')
 
 
-    # print('debug display for iter:')
-    # temp_iter = data_iter.next()
+    print('debug display for iter:')
 
-    # print ('iter:' + str(temp_iter))
+    # for i in range(10):
+    #     temp_iter = data_iter.next()
 
-    # print ('end of debug displaying')
+    #     print ('iter:' + str(temp_iter))
 
-    # print ('the label is:')
-    # print (temp_iter.label)
+    #     print ('the data is:')
+
+    #     temp_data = temp_iter.data[0][0][16]
+
+    #     # print (temp_data[:][:][-1][:])
+
+    #     print (temp_data)
+
+    #     # print ('end of debug displaying')
+
+    #     print ('the label is:')
+    #     print (temp_iter.label)
+
+
 
     eval_metrics = mx.metric.CompositeEvalMetric()
 

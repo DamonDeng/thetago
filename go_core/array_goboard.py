@@ -852,10 +852,13 @@ class ArrayGoBoard(object):
           result[i*2] = self.black_history[cur_point]
           result[i*2 + 1] = self.white_history[cur_point]
 
-    if color_value == 1:
-      result[-1] = self.one_array
-    elif color_value == 2:
-      result[-1] = self.zero_array
+    # if color_value == 1:
+    #   result[-1] = self.one_array
+    # elif color_value == 2:
+    #   result[-1] = self.zero_array
+
+    # filled the last layer with one so that the model don't know which color it is handling.
+    result[-1] = self.one_array
 
     return result
 
