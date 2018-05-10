@@ -880,14 +880,15 @@ class Sgf_game(object):
 
         except LookupError:
             return None
-        if result in ("time", "resign"):
-            return result
+
+        # if result in ("time", "resign"):
+        #     return result
 
         try:
             result_value = float(result)
         except ValueError:
-            print ('failed to convert the result to float:'),
-            print result
+            # print ('failed to convert the result to float:'),
+            # print result
             return None
 
         return result_value
