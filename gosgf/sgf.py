@@ -881,8 +881,8 @@ class Sgf_game(object):
         except LookupError:
             return None
 
-        # if result in ("time", "resign"):
-        #     return result
+        if result in ("time", "resign"):
+            return result
 
         try:
             result_value = float(result)
