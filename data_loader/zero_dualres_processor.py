@@ -96,9 +96,9 @@ class ZeroDualResProcessor(object):
           return
         else:
           if not isinstance(result, float):
-            # if not result == 'resign':
-            return
-          elif result < 5.0:
+            if not result == 'resign':
+              return
+          elif result < 1.0:
             return
 
         #only use games whose result is larger than 5.0
