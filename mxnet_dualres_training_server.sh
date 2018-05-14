@@ -2,7 +2,8 @@
 
 
 python ./mxnet_dualres_training.py train \
---data data/ \
+--data data_train/ \
+--eval data_eval/ \
 --network network.dual_resnet \
 --prefix checkpoint/thetago_dual_res_17L_19res_0p001_win5_no_color_alllevel \
 --epoche 100 \
@@ -12,4 +13,5 @@ python ./mxnet_dualres_training.py train \
 --processor ZeroDualResProcessor \
 --devices gpu \
 --gpunumber 8 \
---levellimit 20k
+--levellimit 20k \
+> ./log/training_log.txt 2>&1 &

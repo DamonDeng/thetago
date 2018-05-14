@@ -1,0 +1,8 @@
+mxnet dual res net training starting 0.01
+using processor: ZeroDualResProcessor
+using processor :::::::: <class 'data_loader.zero_dualres_processor.ZeroDualResProcessor'>
+using 8 workers to load the SGF data
+initing multiple thread SGFIter...
+need to process: 2 files
+INFO:root:Epoch[0] Batch [20]	Speed: 11.70 samples/sec	Dual_CE=5.931182	Dual_MSE=0.940636
+INFO:root:Epoch[0] Batch [40]	Speed: 7.89 samples/sec	Dual_CE=5.901019	Dual_MSE=0.396174

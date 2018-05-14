@@ -24,6 +24,7 @@ def start_training(args):
 
   network_name = args.network
   data_dir = args.data
+  eval_dir = args.eval
   checkpoint_prefix = args.prefix
   
   devices = []
@@ -61,6 +62,13 @@ def start_training(args):
   workers = cpu_count()
   print('using '+ str(workers) + " workers to load the SGF data")
   data_iter = MultiThreadDualSGFIter(sgf_directory=data_dir, 
+                                workers=workers, 
+                                batch_size=args.batchsize, 
+                                file_limit = args.filelimit, 
+                                processor_class=processor, 
+                                level_limit=args.levellimit)
+
+  eval_iter = MultiThreadDualSGFIter(sgf_directory=eval_dir, 
                                 workers=workers, 
                                 batch_size=args.batchsize, 
                                 file_limit = args.filelimit, 
@@ -110,6 +118,7 @@ def start_training(args):
     eval_metrics.add(eval_metrics_2)
 
     mod.fit(data_iter, 
+            eval_data=eval_iter,
             num_epoch=args.epoche, 
             eval_metric=eval_metrics,
             optimizer=args.optimizer,
@@ -159,6 +168,7 @@ def main():
     train_parser = subparsers.add_parser('train', help='Do some training.')
     train_parser.set_defaults(command='train')
     train_parser.add_argument('--data', '-i', required=True, help='Data directory.')
+    train_parser.add_argument('--eval', required=True, help='eval directory.')
     train_parser.add_argument('--network', '-n', required=True, help='Network to use.')
     train_parser.add_argument('--prefix', '-p', required=True, help='prefix of checkpoint.')
     train_parser.add_argument('--devices', '-d', default="cpu", help='type of device.')
