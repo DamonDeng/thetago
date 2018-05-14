@@ -70,7 +70,7 @@ class ZeroDualResProcessor(object):
       if self.sgf.is_level_higher_than(self.level_limit):
 
         b_level = self.sgf.get_player_level('b')
-        w_level = self.sfg.get_player_level('w')
+        w_level = self.sgf.get_player_level('w')
 
         print ("black level:"),
         print (b_level)
