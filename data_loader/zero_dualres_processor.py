@@ -69,6 +69,14 @@ class ZeroDualResProcessor(object):
       # using new function is_level_heighter_than to filter games play by player higher than limit level
       if self.sgf.is_level_higher_than(self.level_limit):
 
+        b_level = self.sgf.get_player_level('b')
+        w_level = self.sfg.get_player_level('w')
+
+        print ("black level:"),
+        print (b_level)
+        print ("white level:"),
+        print (w_level)
+
         winner = self.sgf.get_winner()
         handicap = self.sgf.get_handicap()
 
